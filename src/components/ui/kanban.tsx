@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type ReactNode } from 'react';
+import { useId, useState, useTransition, type ReactNode } from 'react';
 import { DndContext, PointerSensor, useDroppable, useDraggable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ export function Kanban({ columns, cards, onMove, className }: { columns: KanbanC
   const [, start] = useTransition();
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const dndId = useId();
 
   function onDragEnd(e: DragEndEvent) {
     const over = e.over?.id;
@@ -38,7 +39,7 @@ export function Kanban({ columns, cards, onMove, className }: { columns: KanbanC
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext id={dndId} sensors={sensors} onDragEnd={onDragEnd}>
       <div className={cn('grid auto-cols-[minmax(240px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2', className)}>
         {columns.map((c) => (
           <Column key={c.id} column={c} cards={items.filter((i) => i.column === c.id)} />

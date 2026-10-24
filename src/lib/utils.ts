@@ -16,11 +16,27 @@ export const num = (v: number | null | undefined, digits = 0) =>
 
 export const pct = (v: number | null | undefined, digits = 1) => `${num((v || 0) * 100, digits)}%`;
 
+const TZ = 'America/Sao_Paulo';
+
+/** Data pura (YYYY-MM-DD) vira meio-dia em Brasília, para nunca deslocar um dia no fuso. */
+function parseDate(d: string | Date) {
+  if (d instanceof Date) return d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return new Date(`${d}T12:00:00-03:00`);
+  return new Date(d);
+}
+
 export function fmtDate(d: string | Date | null | undefined, opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' }) {
   if (!d) return '';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = parseDate(d);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', ...opts }).format(date);
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, ...opts }).format(date);
+}
+
+/** YYYY-MM-DD de uma data, no fuso de Brasília. */
+export function isoDateBR(d: Date | string = new Date()) {
+  const date = parseDate(d);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  return parts; // en-CA já sai como YYYY-MM-DD
 }
 
 export function fmtDateTime(d: string | Date | null | undefined) {
@@ -39,7 +55,7 @@ export function relTime(d: string | Date | null | undefined) {
 }
 
 export function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return isoDateBR(new Date());
 }
 
 export function addDays(d: Date | string, n: number) {
@@ -89,8 +105,7 @@ export function groupBy<T, K extends string | number>(arr: T[], f: (t: T) => K) 
 }
 
 export function monthKey(d: string | Date) {
-  const x = new Date(d);
-  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`;
+  return isoDateBR(d).slice(0, 7);
 }
 
 export function monthLabel(key: string) {

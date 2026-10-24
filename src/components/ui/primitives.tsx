@@ -160,7 +160,7 @@ export function Textarea({ className, ...rest }: ComponentProps<'textarea'>) {
 }
 export function Select({ className, children, ...rest }: ComponentProps<'select'>) {
   return (
-    <select className={cn(fieldBase, 'appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a3a3a0%27 stroke-width=%272%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E")] bg-[length:12px] bg-[right_12px_center] bg-no-repeat pr-9', className)} {...rest}>
+    <select className={cn(fieldBase, 'appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a3a3a0%27 stroke-width=%272%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E")] bg-[length:12px] bg-[position:right_12px_center] bg-no-repeat pr-9', className)} {...rest}>
       {children}
     </select>
   );

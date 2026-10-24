@@ -97,7 +97,7 @@ export function Drawer({ open, onClose, title, children }: { open: boolean; onCl
     <div className={cn('fixed inset-0 z-[70] transition-opacity', open ? 'opacity-100' : 'pointer-events-none opacity-0')} aria-hidden={!open}>
       <button className="absolute inset-0 bg-black/50" onClick={onClose} aria-label="Fechar" />
       <aside
-        className={cn('glass-strong absolute right-3 top-3 bottom-3 w-full max-w-md overflow-y-auto rounded-3xl p-6 transition-transform duration-300 ease-out', open ? 'translate-x-0' : 'translate-x-[calc(100%+24px)]')}
+        className={cn('glass-strong absolute right-3 top-3 bottom-3 w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-3xl p-6 transition-transform duration-300 ease-out', open ? 'translate-x-0' : 'translate-x-[calc(100%+24px)]')}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           {title && <h3 className="display text-2xl text-ink">{title}</h3>}

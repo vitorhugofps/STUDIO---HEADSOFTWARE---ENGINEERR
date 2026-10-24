@@ -50,15 +50,19 @@ const d = (n: number) => addDays(new Date(), n).toISOString();
 const day = (n: number) => addDays(new Date(), n).toISOString().slice(0, 10);
 
 export async function ensureSeed(db: DB) {
-  const g = globalThis as unknown as { __ihsSeeded?: boolean };
+  const g = globalThis as unknown as { __ihsSeeded?: boolean; __ihsSeeding?: Promise<void> | null };
   if (g.__ihsSeeded) return;
-  const existing = await db.list('services_catalog', { limit: 1 });
-  if (existing.length) {
-    g.__ihsSeeded = true;
-    return;
-  }
-  await seedAll(db, db.mode === 'local');
-  g.__ihsSeeded = true;
+  if (g.__ihsSeeding) return g.__ihsSeeding; // evita duas semeaduras em paralelo (layout + página)
+  g.__ihsSeeding = (async () => {
+    try {
+      const existing = await db.list('services_catalog', { limit: 1 });
+      if (!existing.length) await seedAll(db, db.mode === 'local');
+      g.__ihsSeeded = true;
+    } finally {
+      g.__ihsSeeding = null;
+    }
+  })();
+  return g.__ihsSeeding;
 }
 
 export async function seedAll(db: DB, withProfiles: boolean) {
