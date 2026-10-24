@@ -27,8 +27,13 @@ ok "Node $(node -v)"
 
 # 2. Variáveis de ambiente
 if [ ! -f .env.local ]; then
-  if [ -f .env.example ]; then cp .env.example .env.local; fi
-  warn ".env.local criado a partir do exemplo. Sem Supabase o app roda em modo local (dados de exemplo)."
+  if [ -f env.local ]; then
+    cp env.local .env.local
+    ok ".env.local criado a partir do env.local (Supabase ligado)."
+  else
+    cp .env.example .env.local
+    warn ".env.local criado a partir do exemplo. Sem Supabase o app roda em modo local (dados de exemplo)."
+  fi
 fi
 
 # 3. Dependências e build
