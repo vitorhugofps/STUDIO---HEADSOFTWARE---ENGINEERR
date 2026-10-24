@@ -3,8 +3,10 @@ import { FolderOpen } from 'lucide-react';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import type { Asset, Client } from '@/lib/db/types';
-import { Badge, Button, Card, EmptyState, PageHeader, PillTabs, Progress, Section, Select, Table, TD, TH } from '@/components/ui/primitives';
-import { CopyButton } from '@/components/ui/client';
+import { Badge, Button, Card, EmptyState, Field, Input, PageHeader, PillTabs, Progress, Section, Select, Table, TD, TH, Textarea } from '@/components/ui/primitives';
+import { ActionForm, CopyButton, SubmitButton } from '@/components/ui/client';
+import { generateImageFormAction } from '@/lib/actions/integrations';
+import { hasOpenAIKey } from '@/lib/ai/openai';
 import { Dropzone, FileKindIcon } from '@/components/ui/dropzone';
 import { fmtDate, num } from '@/lib/utils';
 
@@ -286,6 +288,41 @@ function AssetsTab({
           <Card className="p-5">
             <Dropzone compact />
             <p className="mt-3 text-xs text-ink3">Sem cliente definido, o arquivo fica na biblioteca do Studio. Para anexar a um cliente, envie pela página dele.</p>
+          </Card>
+        </Section>
+        <Section title="Gerar imagem" kicker="ChatGPT · OpenAI">
+          <Card className="p-5">
+            <ActionForm action={generateImageFormAction} success="Imagem gerada e salva na Biblioteca" resetOnSuccess className="space-y-3">
+              <Field label="Descreva a imagem" hint="Moodboard, fundo para post, thumbnail, cena de referência. Sem texto na imagem.">
+                <Textarea name="prompt" className="min-h-[88px]" placeholder="Ex.: palco de show sertanejo à noite, luz laranja, público ao fundo, clima de cinema" />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Cliente">
+                  <Select name="client_id" defaultValue="">
+                    <option value="">Studio</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.company || c.contact_name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Formato">
+                  <Select name="size" defaultValue="1024x1024">
+                    <option value="1024x1024">Quadrado 1:1</option>
+                    <option value="1024x1536">Vertical 2:3</option>
+                    <option value="1536x1024">Horizontal 3:2</option>
+                  </Select>
+                </Field>
+              </div>
+              <Field label="Nome do arquivo (opcional)">
+                <Input name="name" placeholder="Ex.: fundo-palco-gibson" />
+              </Field>
+              <SubmitButton className="w-full" disabled={!hasOpenAIKey()} pendingText="Gerando…">
+                {hasOpenAIKey() ? 'Gerar com o ChatGPT' : 'Configure a chave da OpenAI em Settings'}
+              </SubmitButton>
+            </ActionForm>
+            <p className="mt-3 text-xs text-ink3">Imagem gerada entra na Biblioteca com a tag IA. Material real do cliente continua tendo prioridade nas peças.</p>
           </Card>
         </Section>
       </div>

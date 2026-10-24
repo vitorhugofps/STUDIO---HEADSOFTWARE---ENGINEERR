@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, Download, Lock, LockOpen, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Check, Download, Image as ImageIcon, Lock, LockOpen, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, Dot, Example, Field, Input, Table, TD, TH, Textarea } from '@/components/ui/primitives';
 import { ActionButton, ActionForm, CopyButton, SubmitButton } from '@/components/ui/client';
 import { cn, fmtDate } from '@/lib/utils';
@@ -16,6 +16,7 @@ import {
   toggleLockAction,
   updateBrandFieldAction,
 } from '@/lib/actions/marketing';
+import { generateDirectionImageAction } from '@/lib/actions/integrations';
 import { ArtCard, BrandFonts } from '../feed/grid';
 import type { BrandKit } from '@/lib/db/types';
 
@@ -425,7 +426,16 @@ function StepVisual({ kit, data, clientName, clientColor }: { kit: BrandKit; dat
                 ))}
             </dl>
 
-            <div className="mt-auto pt-1">
+            {d.moodboard_url && (
+              <a href={txt(d.moodboard_url)} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-white/10">
+                <img src={txt(d.moodboard_url)} alt={`Moodboard ${txt(d.nome)}`} className="aspect-[3/2] w-full object-cover" />
+              </a>
+            )}
+
+            <div className="mt-auto space-y-2 pt-1">
+              <ActionButton variant="outline" size="sm" className="w-full" action={() => generateDirectionImageAction(kit.id, i)} success="Moodboard gerado pelo ChatGPT">
+                <ImageIcon className="h-3.5 w-3.5" /> {d.moodboard_url ? 'Regerar moodboard (ChatGPT)' : 'Gerar moodboard (ChatGPT)'}
+              </ActionButton>
               <ActionButton variant={isChosen ? 'subtle' : 'glass'} className="w-full" disabled={isChosen} action={() => chooseDirectionAction(kit.id, i)} success="Paleta copiada para os tokens">
                 {isChosen ? 'Direção em uso' : 'Escolher esta direção'}
               </ActionButton>

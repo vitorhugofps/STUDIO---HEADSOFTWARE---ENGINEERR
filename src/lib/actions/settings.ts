@@ -121,8 +121,9 @@ export async function saveSecretsAction(fd: FormData) {
 /* IA                                                                  */
 /* ------------------------------------------------------------------ */
 
-const STRATEGY_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5'];
-const COPY_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5'];
+const STRATEGY_MODELS = ['claude-opus-5-5', 'claude-fable-5-1'];
+const COPY_MODELS = ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'];
+const EFFORTS = ['max', 'high', 'medium'];
 
 export async function saveModelsAction(fd: FormData) {
   const user = await settingsUser();
@@ -131,10 +132,12 @@ export async function saveModelsAction(fd: FormData) {
   const copy = String(fd.get('anthropicModelCopy') || '');
   if (!STRATEGY_MODELS.includes(strategy)) return fail('Modelo de estratégia inválido.');
   if (!COPY_MODELS.includes(copy)) return fail('Modelo de copy inválido.');
-  const next = writeConfig({ anthropicModelStrategy: strategy, anthropicModelCopy: copy });
+  const effort = String(fd.get('anthropicEffort') || 'high');
+  if (!EFFORTS.includes(effort)) return fail('Esforço inválido.');
+  const next = writeConfig({ anthropicModelStrategy: strategy, anthropicModelCopy: copy, anthropicEffort: effort });
   if (!wasPersisted(next)) return fail(READ_ONLY);
   const d = await db();
-  await logActivity(d, { actor_id: user.id, actor_name: user.name, action: `trocou os modelos de IA (estratégia ${strategy}, copy ${copy})`, entity: 'settings' });
+  await logActivity(d, { actor_id: user.id, actor_name: user.name, action: `trocou os modelos de IA (estratégia ${strategy} · esforço ${effort}, copy ${copy})`, entity: 'settings' });
   revalidatePath('/settings');
   return { ok: true as const };
 }

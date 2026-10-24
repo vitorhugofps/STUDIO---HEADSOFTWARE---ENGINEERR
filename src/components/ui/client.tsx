@@ -94,7 +94,7 @@ export function Drawer({ open, onClose, title, children }: { open: boolean; onCl
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
   return (
-    <div className={cn('fixed inset-0 z-[70] transition-opacity', open ? 'opacity-100' : 'pointer-events-none opacity-0')} aria-hidden={!open}>
+    <div className={cn('fixed inset-0 z-[70] transition-opacity', open ? 'opacity-100' : 'pointer-events-none opacity-0')} aria-hidden={!open} inert={!open}>
       <button className="absolute inset-0 bg-black/50" onClick={onClose} aria-label="Fechar" />
       <aside
         className={cn('glass-strong absolute right-3 top-3 bottom-3 w-[calc(100%-24px)] max-w-md overflow-y-auto rounded-3xl p-6 transition-transform duration-300 ease-out', open ? 'translate-x-0' : 'translate-x-[calc(100%+24px)]')}

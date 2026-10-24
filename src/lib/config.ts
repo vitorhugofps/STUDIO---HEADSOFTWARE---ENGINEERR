@@ -24,8 +24,13 @@ export function dataDir() {
 
 export type AppConfig = {
   anthropicApiKey?: string;
-  anthropicModelStrategy?: string; // opus | sonnet | haiku (geração padrão)
-  anthropicModelCopy?: string;
+  anthropicModelStrategy?: string; // claude-opus-5-5 | claude-fable-5-1
+  anthropicModelCopy?: string; // claude-sonnet-5-5 | claude-haiku-5-5
+  anthropicEffort?: string; // max | high | medium (orçamento de pensamento na estratégia)
+  openaiApiKey?: string;
+  openaiTextModel?: string; // gpt-5 por padrão
+  openaiImageModel?: string; // gpt-image-1 por padrão
+  aiFallbackToOpenAI?: boolean; // ChatGPT como reserva do Claude (ligado por padrão)
   metaAccessToken?: string;
   metaAppId?: string;
   resendApiKey?: string;
@@ -65,9 +70,10 @@ export function writeConfig(patch: Partial<AppConfig>) {
   return next;
 }
 
-export function getSecret(name: 'anthropicApiKey' | 'metaAccessToken' | 'resendApiKey' | 'apifyToken') {
+export function getSecret(name: 'anthropicApiKey' | 'openaiApiKey' | 'metaAccessToken' | 'resendApiKey' | 'apifyToken') {
   const envMap: Record<string, string | undefined> = {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    openaiApiKey: process.env.OPENAI_API_KEY,
     metaAccessToken: process.env.META_ACCESS_TOKEN,
     resendApiKey: process.env.RESEND_API_KEY,
     apifyToken: process.env.APIFY_TOKEN,

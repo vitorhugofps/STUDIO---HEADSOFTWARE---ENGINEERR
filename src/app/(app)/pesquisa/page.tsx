@@ -17,6 +17,7 @@ import {
   refreshRadarAction,
   removeProspectAction,
 } from '@/lib/actions/ops';
+import { scrapeCompetitorAction } from '@/lib/actions/integrations';
 import { relTime } from '@/lib/utils';
 
 export const metadata = { title: 'Pesquisa' };
@@ -234,8 +235,13 @@ function Concorrentes({ active, competitors, report }: { active: ActiveChip | nu
                             ))}
                         </div>
                       )}
-                      {c.notes && <p className="mt-1.5 text-xs text-ink2">{c.notes}</p>}
+                      {c.notes && <p className="mt-1.5 whitespace-pre-line text-xs text-ink2">{c.notes}</p>}
                     </div>
+                    {c.instagram && (
+                      <ActionButton variant="outline" size="sm" action={scrapeCompetitorAction.bind(null, c.id)} success="Perfil coletado pelo Apify" title="Coleta seguidores, posts e bio pelo Apify">
+                        Coletar Instagram
+                      </ActionButton>
+                    )}
                     <ActionButton variant="ghost" size="icon" aria-label={`Remover ${c.name}`} action={deleteCompetitorAction.bind(null, c.id)} confirm={`Remover ${c.name} da lista?`} success="Concorrente removido">
                       <Trash2 className="h-4 w-4" />
                     </ActionButton>

@@ -1,6 +1,9 @@
 import { requireRole } from '@/lib/auth';
 import { STUDIO_DEFAULTS, isSupabaseMode, readConfig, supabaseEnv, type AppConfig } from '@/lib/config';
-import { resolveModel } from '@/lib/ai/claude';
+import { resolveModel, resolveEffort, STRATEGY_MODELS, COPY_MODELS, EFFORTS } from '@/lib/ai/claude';
+import { openaiModels, fallbackEnabled } from '@/lib/ai/openai';
+import { IntegrationTest } from './test-button';
+import { saveOpenAIAction } from '@/lib/actions/integrations';
 import { db } from '@/lib/db';
 import { QUESTIONNAIRE, type QType } from '@/lib/questionnaire';
 import { Badge, Card, Dot, EmptyState, Field, Input, PageHeader, PillTabs, Section, Select, Stat, Table, TD, TH, Textarea } from '@/components/ui/primitives';
@@ -118,6 +121,7 @@ function StudioTab({ studio }: { studio: NonNullable<AppConfig['studio']> }) {
 
 const SECRETS = {
   anthropicApiKey: { env: 'ANTHROPIC_API_KEY', field: 'Chave da API' },
+  openaiApiKey: { env: 'OPENAI_API_KEY', field: 'Chave da API da OpenAI' },
   metaAccessToken: { env: 'META_ACCESS_TOKEN', field: 'Token de acesso' },
   resendApiKey: { env: 'RESEND_API_KEY', field: 'Chave da API' },
   apifyToken: { env: 'APIFY_TOKEN', field: 'Token' },
@@ -158,6 +162,7 @@ function buildView(cfg: AppConfig): SettingsView {
     reportFromEmail: cfg.reportFromEmail || '',
     secrets: {
       anthropicApiKey: secretState(cfg, 'anthropicApiKey'),
+      openaiApiKey: secretState(cfg, 'openaiApiKey'),
       metaAccessToken: secretState(cfg, 'metaAccessToken'),
       resendApiKey: secretState(cfg, 'resendApiKey'),
       apifyToken: secretState(cfg, 'apifyToken'),
@@ -200,7 +205,9 @@ function IntegrationHead({ name, what, ok, label }: { name: string; what: string
 function IntegrationsTab({ view }: { view: SettingsView }) {
   const supabase = isSupabaseMode();
   const { url } = supabaseEnv();
-  const { anthropicApiKey: anthropic, metaAccessToken: meta, resendApiKey: resend, apifyToken: apify } = view.secrets;
+  const { anthropicApiKey: anthropic, openaiApiKey: openai, metaAccessToken: meta, resendApiKey: resend, apifyToken: apify } = view.secrets;
+  const oa = openaiModels();
+  const fallback = fallbackEnabled();
 
   return (
     <div className="space-y-4">
@@ -218,6 +225,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
             </div>
           </dl>
           <p className="text-xs text-ink3">A conexão vem das variáveis SUPABASE_URL e SUPABASE_ANON_KEY do ambiente. Para trocar, altere as variáveis e reinicie.</p>
+          <IntegrationTest provider="supabase" />
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -226,6 +234,28 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
             <SecretInput state={anthropic} name="anthropicApiKey" />
             <SubmitButton variant="subtle">Salvar Anthropic</SubmitButton>
           </ActionForm>
+          <IntegrationTest provider="anthropic" disabled={!anthropic.ok} />
+        </Card>
+
+        <Card className="space-y-4 p-5">
+          <IntegrationHead name="OpenAI (ChatGPT)" what="Reserva do Claude e motor de imagens (moodboards, fundos, thumbnails). Claude continua primeiro em toda execução." ok={openai.ok} label={openai.label} />
+          <ActionForm action={saveOpenAIAction} success="OpenAI salva" resetOnSuccess className="space-y-3">
+            <SecretInput state={openai} name="openaiApiKey" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Modelo de texto" hint="Usado só como reserva">
+                <Input key={oa.text} name="openaiTextModel" defaultValue={oa.text} spellCheck={false} />
+              </Field>
+              <Field label="Modelo de imagem" hint="gpt-image-1 recomendado">
+                <Input key={oa.image} name="openaiImageModel" defaultValue={oa.image} spellCheck={false} />
+              </Field>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-ink2">
+              <input type="checkbox" name="aiFallbackToOpenAI" defaultChecked={fallback} className="h-3.5 w-3.5 accent-accent" />
+              Usar o ChatGPT quando a chamada ao Claude falhar ou não houver chave da Anthropic
+            </label>
+            <SubmitButton variant="subtle">Salvar OpenAI</SubmitButton>
+          </ActionForm>
+          <IntegrationTest provider="openai" disabled={!openai.ok} />
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -237,6 +267,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
             </Field>
             <SubmitButton variant="subtle">Salvar Meta</SubmitButton>
           </ActionForm>
+          <IntegrationTest provider="meta" disabled={!meta.ok} />
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -248,6 +279,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
             </Field>
             <SubmitButton variant="subtle">Salvar Resend</SubmitButton>
           </ActionForm>
+          <IntegrationTest provider="resend" disabled={!resend.ok} />
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -258,12 +290,10 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
             <SecretInput state={apify} name="apifyToken" />
             <div className="flex items-center gap-3">
               <SubmitButton variant="subtle">Salvar Apify</SubmitButton>
-              <span className="flex items-center gap-2 text-xs text-ink3">
-                <Badge tone="info">próxima fase</Badge>
-                Uso na Prospecção
-              </span>
+              <span className="text-xs text-ink3">Usado em Pesquisa → Concorrentes (perfil do Instagram)</span>
             </div>
           </ActionForm>
+          <IntegrationTest provider="apify" disabled={!apify.ok} />
         </Card>
 
         <Card className="space-y-4 p-5">
@@ -274,7 +304,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
           </div>
         </Card>
       </div>
-      <p className="text-xs text-ink3">As chaves ficam só no servidor. A tela mostra apenas se existem, nunca o valor.</p>
+      <p className="text-xs text-ink3">As chaves ficam só no servidor. A tela mostra apenas se existem, nunca o valor. Política de IA: Claude (Opus 5.5 ou Fable 5.1 na estratégia, Sonnet 5.5 na copy) executa tudo; o ChatGPT entra nas imagens e como reserva.</p>
     </div>
   );
 }
@@ -284,6 +314,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
 /* ================================================================== */
 
 const MODEL_NAME: Record<string, string> = {
+  'claude-fable-5-1': 'Claude Fable 5.1',
   'claude-opus-5-5': 'Claude Opus 5.5',
   'claude-sonnet-5-5': 'Claude Sonnet 5.5',
   'claude-haiku-5-5': 'Claude Haiku 5.5',
@@ -336,11 +367,21 @@ async function AITab() {
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="p-6 lg:col-span-2">
-          <ActionForm key={`${resolveModel('strategy')}|${resolveModel('copy')}`} action={saveModelsAction} success="Modelos salvos" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ModelSelect name="anthropicModelStrategy" label="Modelo de estratégia" hint="Diagnóstico, proposta, marca, kit zero e pesquisa." options={['claude-opus-5-5', 'claude-sonnet-5-5']} current={resolveModel('strategy')} />
-              <ModelSelect name="anthropicModelCopy" label="Modelo de copy" hint="Plano de conteúdo, revisão, roteiros, anúncios e insights." options={['claude-sonnet-5-5', 'claude-haiku-5-5']} current={resolveModel('copy')} />
+          <ActionForm key={`${resolveModel('strategy')}|${resolveModel('copy')}|${resolveEffort()}`} action={saveModelsAction} success="Modelos salvos" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <ModelSelect name="anthropicModelStrategy" label="Modelo de estratégia" hint="Diagnóstico, proposta, marca, kit zero e pesquisa." options={[...STRATEGY_MODELS]} current={resolveModel('strategy')} />
+              <Field label="Esforço de raciocínio" hint="Só na estratégia. Máximo pensa mais e custa mais.">
+                <Select name="anthropicEffort" defaultValue={resolveEffort()}>
+                  {EFFORTS.map((e) => (
+                    <option key={e} value={e}>
+                      {e === 'max' ? 'Máximo' : e === 'high' ? 'Alto' : 'Médio'}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <ModelSelect name="anthropicModelCopy" label="Modelo de copy" hint="Plano de conteúdo, revisão, roteiros, anúncios e insights." options={[...COPY_MODELS]} current={resolveModel('copy')} />
             </div>
+            <p className="text-xs text-ink3">Claude executa tudo. ChatGPT (OpenAI) só entra em imagens e como reserva, configurado em Integrações.</p>
             <SubmitButton>Salvar modelos</SubmitButton>
           </ActionForm>
         </Card>
