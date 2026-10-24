@@ -1,0 +1,18 @@
+{
+  "name": "impacto-headsoftware-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IMPACTO HEADSOFTWARE para macOS",
+  "main": "main.cjs",
+  "author": "Studio Impacto",
+  "scripts": {
+    "dev": "IHS_DEV_URL=http://127.0.0.1:3741 electron .",
+    "start": "electron .",
+    "dist": "electron-builder --mac --config electron-builder.yml",
+    "dist:dir": "electron-builder --mac dir --config electron-builder.yml"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

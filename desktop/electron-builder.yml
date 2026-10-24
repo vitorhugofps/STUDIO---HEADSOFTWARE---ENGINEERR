@@ -1,0 +1,35 @@
+appId: br.com.studioimpacto.headsoftware
+productName: IMPACTO HEADSOFTWARE
+copyright: Studio Impacto
+directories:
+  output: dist
+  buildResources: build
+files:
+  - main.cjs
+  - preload.cjs
+  - package.json
+extraResources:
+  - from: ../.next/standalone
+    to: app
+    filter:
+      - "**/*"
+      - "!**/.env*"
+mac:
+  category: public.app-category.business
+  icon: build/icon.png
+  target:
+    - target: dmg
+    - target: dir
+  darkModeSupport: true
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+dmg:
+  title: IMPACTO HEADSOFTWARE
+  contents:
+    - x: 140
+      y: 180
+    - x: 400
+      y: 180
+      type: link
+      path: /Applications

@@ -1,0 +1,1 @@
+Coloque aqui Foun-SemiBold.woff2 e Foun-Bold.woff2 (fonte oficial do Studio). Sem eles, o app usa Barlow Condensed.

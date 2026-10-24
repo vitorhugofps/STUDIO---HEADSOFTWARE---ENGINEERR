@@ -1,0 +1,260 @@
+@import '@fontsource/barlow-condensed/500.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow-condensed/700.css';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/jetbrains-mono';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 10 10 10;
+  --s1: 17 17 17;
+  --s2: 23 23 23;
+  --s3: 31 31 31;
+  --line: 255 255 255;
+  --ink: 245 245 243;
+  --ink2: 163 163 160;
+  --ink3: 110 110 108;
+  --accent: 255 91 31;
+  --accent2: 194 41 10;
+  --ok: 61 220 151;
+  --warn: 255 176 32;
+  --err: 255 77 79;
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-line: rgba(255, 255, 255, 0.09);
+  --app-bg: rgb(var(--bg));
+  color-scheme: dark;
+}
+
+html.light {
+  --bg: 245 245 243;
+  --s1: 255 255 255;
+  --s2: 236 235 232;
+  --s3: 224 223 219;
+  --line: 0 0 0;
+  --ink: 10 10 10;
+  --ink2: 92 92 90;
+  --ink3: 150 150 148;
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-line: rgba(0, 0, 0, 0.08);
+  --app-bg: rgb(var(--bg));
+  color-scheme: light;
+}
+
+/* Dentro do app desktop, o fundo deixa a mesa do Mac aparecer por trás do vidro. */
+html.electron:not(.light) {
+  --app-bg: rgba(10, 10, 10, 0.86);
+}
+
+* {
+  border-color: rgb(var(--line) / 0.08);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--app-bg);
+  color: rgb(var(--ink));
+  font-family: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.35);
+}
+
+/* Barra de rolagem discreta */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--line) / 0.18) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--line) / 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid var(--glass-line);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.07);
+    -webkit-backdrop-filter: blur(32px) saturate(160%);
+    backdrop-filter: blur(32px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 80px -40px rgba(0, 0, 0, 0.9);
+  }
+  html.light .glass-strong {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+  .card {
+    @apply rounded-2xl border border-white/[0.07] bg-s1;
+  }
+  html.light .card {
+    @apply border-black/[0.06];
+  }
+  .display {
+    font-family: 'Foun', 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: -0.005em;
+    font-weight: 600;
+    line-height: 0.95;
+  }
+  .num {
+    font-family: 'Foun', 'Barlow Condensed', ui-sans-serif, sans-serif;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .label {
+    @apply text-[11px] font-medium uppercase tracking-[0.14em] text-ink3;
+  }
+  .ring-accent {
+    box-shadow: 0 0 0 1px rgb(var(--accent) / 0.55), 0 0 0 4px rgb(var(--accent) / 0.18);
+  }
+  .focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(var(--bg)), 0 0 0 4px rgb(var(--accent));
+  }
+  /* Névoa laranja: só em telas de entrada */
+  .nevoa {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .nevoa::before {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    z-index: -1;
+    background:
+      radial-gradient(60% 50% at 85% 10%, rgb(var(--accent) / 0.55) 0%, rgb(var(--accent2) / 0.28) 30%, transparent 62%),
+      radial-gradient(40% 40% at 10% 90%, rgb(var(--accent2) / 0.22) 0%, transparent 60%);
+    filter: blur(20px);
+    pointer-events: none;
+  }
+  .nevoa::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.045;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+  .nevoa-soft::before {
+    opacity: 0.45;
+  }
+  /* O ponto: linguagem de status do Studio */
+  .dot {
+    @apply inline-block h-2 w-2 shrink-0 rounded-full;
+  }
+  .dot-rec {
+    @apply bg-accent;
+    animation: rec 1.6s ease-in-out infinite;
+  }
+  .dot-wave {
+    position: relative;
+    @apply bg-warn;
+  }
+  .dot-wave::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--warn));
+    animation: wave 1.8s ease-out infinite;
+  }
+  .press {
+    transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, opacity 150ms ease-out;
+  }
+  .press:active {
+    transform: scale(0.985);
+  }
+  .rise {
+    animation: rise 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .hairline {
+    @apply border-t border-white/[0.07];
+  }
+  html.light .hairline {
+    @apply border-black/[0.06];
+  }
+  .twotone em {
+    font-style: normal;
+    color: rgb(var(--ink2));
+  }
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+.app-main {
+  padding-left: 272px;
+}
+html[data-sidebar='collapsed'] .app-main {
+  padding-left: 96px;
+}
+@media (max-width: 900px) {
+  .app-main {
+    padding-left: 96px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Recharts no tema */
+.recharts-cartesian-grid line {
+  stroke: rgb(var(--line) / 0.06);
+}
+.recharts-text {
+  fill: rgb(var(--ink3));
+  font-size: 11px;
+}
+.recharts-tooltip-cursor {
+  fill: rgb(var(--line) / 0.04);
+}
+
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
