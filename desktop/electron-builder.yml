@@ -14,6 +14,8 @@ extraResources:
     filter:
       - "**/*"
       - "!**/.env*"
+  - from: runtime.env
+    to: app/runtime.env
 mac:
   category: public.app-category.business
   icon: build/icon.png
@@ -33,3 +35,5 @@ dmg:
       y: 180
       type: link
       path: /Applications
+
+publish: null

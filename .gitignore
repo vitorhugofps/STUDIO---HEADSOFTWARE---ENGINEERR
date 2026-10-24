@@ -12,3 +12,4 @@ desktop/dist
 tsconfig.tsbuildinfo
 next-env.d.ts
 env.local
+desktop/runtime.env

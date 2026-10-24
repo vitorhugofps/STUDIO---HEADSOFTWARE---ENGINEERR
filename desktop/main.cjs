@@ -15,7 +15,8 @@ const userData = () => app.getPath('userData');
 
 /** Lê variáveis do arquivo .env na pasta de dados do app (gravado pelo instalador) ou do .env.local do projeto. */
 function loadEnv() {
-  const candidates = [path.join(userData(), '.env'), path.join(__dirname, '..', '.env.local'), path.join(__dirname, '..', '.env')];
+  // Ordem: ajustes da máquina (userData/.env) > projeto (.env.local) > runtime.env embutido no pacote do time
+  const candidates = [path.join(userData(), '.env'), path.join(__dirname, '..', '.env.local'), path.join(__dirname, '..', '.env'), path.join(process.resourcesPath || '', 'app', 'runtime.env')];
   const env = {};
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
