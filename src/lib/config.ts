@@ -28,9 +28,7 @@ export type AppConfig = {
   anthropicModelCopy?: string; // claude-sonnet-5-5 | claude-haiku-5-5
   anthropicEffort?: string; // max | high | medium (orçamento de pensamento na estratégia)
   openaiApiKey?: string;
-  openaiTextModel?: string; // gpt-5 por padrão
-  openaiImageModel?: string; // gpt-image-1 por padrão
-  aiFallbackToOpenAI?: boolean; // ChatGPT como reserva do Claude (ligado por padrão)
+  openaiImageModel?: string; // gpt-image-1 (padrão) | gpt-image-1-mini | dall-e-3. A OpenAI só gera imagens.
   metaAccessToken?: string;
   metaAppId?: string;
   resendApiKey?: string;

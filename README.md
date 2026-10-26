@@ -25,13 +25,15 @@ Uploads ficam em `data/uploads`. Vídeos grandes: use link do Google Drive.
 
 Em **Settings → Integrações** cole a chave da API da Anthropic. Sem chave, toda geração sai marcada como **exemplo** e o app continua funcionando. Modelos: Opus 5.5 para estratégia e revisão, Sonnet 5.5 para copy e roteiros, Haiku 5.5 para tarefas leves. Custos ficam em *Financeiro → IA* (a partir de `agent_runs`).
 
+**ChatGPT (OpenAI) é usado somente para criar imagens** (moodboards da Brand, imagens de apoio e variações). Todo texto, estratégia e roteiro ficam no Claude: não existe modo de texto nem reserva do Claude na OpenAI. No card **ChatGPT · Imagens** (Settings → Integrações, ou a variável `OPENAI_API_KEY`) você cola a chave e escolhe o modelo de imagem: `gpt-image-1` (padrão), `gpt-image-1-mini` ou `dall-e-3`. *Testar conexão* confere se a chave acessa o modelo escolhido e, se não acessar, lista os modelos de imagem que ela pode usar. As imagens saem em *Biblioteca → Gerar imagem* e em *Marketing → Brand → Gerar moodboard*, e entram na Biblioteca com a tag IA. Sem a chave da OpenAI, só a geração de imagens fica indisponível.
+
 ## Estrutura
 
 ```
 src/app/(app)/…         páginas (Dashboard, Clientes, Marketing, Projects, Workflow, Sites, Pesquisa, Biblioteca, Agenda, Vendas, Contratos, Financeiro, Analytics, Team, Settings, User, Aprovações)
 src/app/aprovar/[token] portal público de aprovação do cliente
 src/lib/db              tipos, banco local (JSON) e adaptador Supabase
-src/lib/ai              Claude (generateJSON/generateText/stream) e prompts do Método Impacto
+src/lib/ai              Claude (generateJSON/generateText/stream), prompts do Método Impacto e geração de imagens (ChatGPT, só imagens)
 src/lib/questionnaire   questionário de diagnóstico (10 blocos + nichos)
 src/lib/actions         server actions por módulo
 src/components          design system (primitives, client, charts, kanban, dropzone) e layout (sidebar, topbar, assistente)
