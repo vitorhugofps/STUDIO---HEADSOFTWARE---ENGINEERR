@@ -1,5 +1,5 @@
 /**
- * Tipos das tabelas do IMPACTO HEADSOFTWARE.
+ * Tipos das tabelas do Impacto.
  * O mesmo esquema vale para o modo Supabase (supabase/migrations) e para o modo local (.data/db.json).
  */
 

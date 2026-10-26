@@ -1,5 +1,5 @@
 #!/bin/bash
-# Abre o IMPACTO HEADSOFTWARE em modo desenvolvimento (recarrega ao salvar arquivos) dentro da janela do app.
+# Abre o Impacto em modo desenvolvimento (recarrega ao salvar arquivos) dentro da janela do app.
 set -e
 cd "$(dirname "$0")"
 [ -d node_modules ] || npm install --no-audit --no-fund

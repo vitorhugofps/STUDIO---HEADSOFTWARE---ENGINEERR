@@ -47,7 +47,7 @@ export function Sidebar({ user, badges, logoutAction }: { user: { name: string; 
         {!collapsed && (
           <div className="no-drag leading-none">
             <div className="display text-[17px] tracking-tight text-ink">Impacto</div>
-            <div className="label mt-1 text-[9px]">Headsoftware</div>
+            <div className="label mt-1 text-[9px]">Studio Impacto</div>
           </div>
         )}
       </div>

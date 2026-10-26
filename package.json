@@ -1,8 +1,8 @@
 {
-  "name": "impacto-headsoftware",
+  "name": "impacto",
   "version": "0.1.0",
   "private": true,
-  "description": "IMPACTO HEADSOFTWARE · sistema operacional do Studio Impacto (CRM, marketing, tráfego, marca, vídeo, vendas e financeiro)",
+  "description": "Impacto · sistema operacional do Studio Impacto (CRM, marketing, tráfego, marca, vídeo, vendas e financeiro)",
   "scripts": {
     "dev": "next dev -p 3741",
     "build": "next build && node scripts/postbuild.mjs",

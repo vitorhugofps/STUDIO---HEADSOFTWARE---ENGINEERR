@@ -7,6 +7,10 @@ type ButtonProps = {
   variant?: 'primary' | 'ghost' | 'glass' | 'outline' | 'danger' | 'subtle';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   href?: string;
+  /** Com target, download ou href de API, vira um <a> comum (sem navegação do Next). */
+  target?: string;
+  download?: boolean | string;
+  rel?: string;
   className?: string;
   children?: ReactNode;
 } & Omit<ComponentProps<'button'>, 'className' | 'children'>;
@@ -28,8 +32,15 @@ const btnSize: Record<NonNullable<ButtonProps['size']>, string> = {
   icon: 'h-9 w-9 p-0',
 };
 
-export function Button({ variant = 'primary', size = 'md', href, className, children, ...rest }: ButtonProps) {
+export function Button({ variant = 'primary', size = 'md', href, target, download, rel, className, children, ...rest }: ButtonProps) {
   const cls = cn(btnBase, btnVariant[variant], btnSize[size], className);
+  if (href && (target || download !== undefined || href.startsWith('/api/') || /^https?:/.test(href))) {
+    return (
+      <a href={href} className={cls} target={target} download={download === true ? '' : download || undefined} rel={rel || (target === '_blank' ? 'noreferrer' : undefined)}>
+        {children}
+      </a>
+    );
+  }
   if (href) {
     return (
       <Link href={href} className={cls}>

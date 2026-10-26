@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gera os pacotes do IMPACTO HEADSOFTWARE para distribuir ao time (Apple Silicon e Intel),
+# Gera os pacotes do Impacto para distribuir ao time (Apple Silicon e Intel),
 # já conectados ao Supabase do Studio. Saída em desktop/dist/*.zip. Compartilhe pelo Drive ou WhatsApp.
 set -e
 cd "$(dirname "$0")"
@@ -18,5 +18,5 @@ bold "Pacotes prontos em desktop/dist:"
 ls -1 dist/*.zip
 echo
 echo "Quem receber precisa, após copiar para Aplicativos, rodar uma vez no Terminal:"
-echo '  xattr -dr com.apple.quarantine "/Applications/IMPACTO HEADSOFTWARE.app"'
+echo '  xattr -dr com.apple.quarantine "/Applications/Impacto.app"'
 echo "(ou Ajustes do Sistema → Privacidade e Segurança → Abrir mesmo assim). Para eliminar esse passo, assine o app com um Apple Developer ID."

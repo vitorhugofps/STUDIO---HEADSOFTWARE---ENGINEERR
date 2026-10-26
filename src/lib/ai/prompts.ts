@@ -1,5 +1,5 @@
 /**
- * Prompts do IMPACTO HEADSOFTWARE, no Método Impacto (13 camadas):
+ * Prompts do Impacto, no Método Impacto (13 camadas):
  * papel, contexto do cliente, objetivo e público, referências, assets, especificação,
  * obrigatório e proibido, direção estética, regras de marca, entregáveis, processo com checkpoint,
  * revisão independente e protocolo de iteração.
@@ -81,6 +81,31 @@ ${steps[step]}
 Respeite o que já foi aprovado e travado. Sem clichê, sem vocabulário proibido.`;
   },
 
+  brandbook: (brief: string, kit: string) => `PAPEL: diretor de marca e redator sênior do Studio Impacto. Vai escrever o conteúdo editorial do MANUAL DE MARCA completo (brandbook) do cliente, no padrão do manual do próprio Studio: capítulos em campos de cor, frases curtas, texto que orienta quem vai produzir peça amanhã.
+${brief}
+BRANDKIT APROVADO (fonte da verdade; não contradiga, complete): ${kit}
+
+Escreva em português do Brasil, sem travessão, sem clichê, sem vocabulário proibido. Cada texto pronto para ir para a página, sem rótulos como "exemplo". Nomes próprios de cor curtos e ligados ao universo do cliente (ex.: "Laranja Palco", "Verde Mata"), nunca só o nome do matiz.
+FORMATO JSON:
+{
+ "hero_sub": "1 frase que apresenta o manual e a marca",
+ "manifesto": ["6 a 8 parágrafos curtos, 1 a 2 frases cada; use dois-pontos para destacar a parte final quando couber"],
+ "pmv": {"missao": "1 frase", "visao": "1 frase com horizonte (ano ou marco)"},
+ "valores": [{"nome": "2 a 4 palavras", "comportamento": "o que se vê no dia a dia, 1 a 2 frases"}] (5 itens),
+ "posicionamento": {"categoria": "...", "territorio": "...", "prova": "..."},
+ "personalidade": {"statement": "Se a marca fosse uma pessoa...", "pares": [["Somos", "Não somos"]] (6 pares de adjetivos)},
+ "simbolo": {"conceito": "como o logotipo é construído e por quê (2 a 3 frases)", "significados": [{"nome": "...", "texto": "..."}] (4 a 6)},
+ "construcao": {"area_protecao": "regra do módulo e do respiro em 2 frases", "tamanhos": [{"versao": "Principal", "valor": "30 mm · 140 px"}] (3 a 4)},
+ "usos_incorretos": ["8 itens curtos"],
+ "cores": [{"chave": "neutra_escura|primaria|neutra_clara|destaque|secundaria", "nome": "nome próprio", "uso": "onde usar, 1 a 2 frases", "proporcao": "60%"}],
+ "tipografia": {"display": {"para_que": "...", "como_compor": "...", "cuidados": "..."}, "texto": {"para_que": "...", "escala": "..."}},
+ "grafismo": {"titulo": "nome do elemento gráfico da marca", "descricao": "2 frases", "regras": [{"titulo": "...", "texto": "..."}] (6)},
+ "fotografia": [{"titulo": "...", "texto": "..."}] (3), "movimento": [{"titulo": "...", "texto": "..."}] (3),
+ "linguagem": {"principios": [{"titulo": "...", "texto": "...", "exemplo": "frase real na voz da marca"}] (5), "tom_por_canal": [{"canal": "Instagram|WhatsApp|Site|Proposta|E-mail", "tom": "...", "exemplo": "..."}] (5), "grafia": "como escrever o nome e regras de pontuação"},
+ "aplicacoes_intro": "1 a 2 frases",
+ "fechamento": "frase final do manual, na voz da marca"
+}`,
+
   feedPlan: (brief: string, month: string, goal: string, quantity: number) => `PAPEL: equipe de conteúdo do Studio Impacto.
 ${brief}
 MÊS: ${month} · OBJETIVO: ${goal || 'recorrência e contratação'} · QUANTIDADE: ${quantity} peças.
@@ -133,7 +158,7 @@ FORMATO JSON: {"ponto_de_partida":["3 frases"],"opcoes":[{"nome":"Ponto|Temporad
 
   assistant: (screen: string, context: string) => `${STUDIO_SYSTEM}
 
-Você está dentro do IMPACTO HEADSOFTWARE, o sistema do Studio Impacto, como o Assistente Impacto. O usuário está na tela: ${screen}.
+Você está dentro do Impacto, o sistema do Studio Impacto, como o Assistente Impacto. O usuário está na tela: ${screen}.
 Contexto disponível: ${context}
 Responda curto, direto e pronto para usar. Quando fizer sentido, entregue a peça (legenda, gancho, roteiro, mensagem) já pronta para copiar.`,
 };

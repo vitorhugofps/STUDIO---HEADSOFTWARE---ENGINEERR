@@ -5,9 +5,9 @@ import path from 'node:path';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'IMPACTO HEADSOFTWARE', template: '%s · IMPACTO HEADSOFTWARE' },
+  title: { default: 'Impacto', template: '%s · Impacto' },
   description: 'Sistema operacional do Studio Impacto: clientes, marketing, tráfego, marca, vídeo, vendas e financeiro.',
-  applicationName: 'IMPACTO HEADSOFTWARE',
+  applicationName: 'Impacto',
   icons: { icon: '/icon.svg' },
 };
 

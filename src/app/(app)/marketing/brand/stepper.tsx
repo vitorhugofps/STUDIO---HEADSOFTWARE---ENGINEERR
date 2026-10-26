@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, Download, Image as ImageIcon, Lock, LockOpen, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { BookOpen, Check, Download, ExternalLink, FileDown, Image as ImageIcon, Lock, LockOpen, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { Badge, Button, Card, Dot, Example, Field, Input, Table, TD, TH, Textarea } from '@/components/ui/primitives';
 import { ActionButton, ActionForm, CopyButton, SubmitButton } from '@/components/ui/client';
 import { cn, fmtDate } from '@/lib/utils';
@@ -17,8 +17,11 @@ import {
   updateBrandFieldAction,
 } from '@/lib/actions/marketing';
 import { generateDirectionImageAction } from '@/lib/actions/integrations';
+import { generateBrandbookAction } from '@/lib/actions/brandbook';
 import { ArtCard, BrandFonts } from '../feed/grid';
 import type { BrandKit } from '@/lib/db/types';
+
+export type BrandbookFile = { id: string; url: string; name: string; created_at: string; example?: boolean; version?: number };
 
 /* ------------------------------------------------------------------ */
 /* Helpers defensivos: o JSON vindo da IA pode variar de forma         */
@@ -477,14 +480,98 @@ function StepAplicacoes({ data }: { data: Record<string, any> }) {
   );
 }
 
-function StepManual({ kit }: { kit: BrandKit }) {
+/** Brandbook completo: HTML navegável no padrão do manual do Studio, com download em HTML e PDF. */
+function BrandbookPanel({ kit, file, ready }: { kit: BrandKit; file: BrandbookFile | null; ready: boolean }) {
+  const [preview, setPreview] = useState<number>(0);
+  const router = useRouter();
+  const brandbook = o(o(o(kit.applications).manual).brandbook);
+  const enriched = Boolean(brandbook.generated_at);
+  const isExample = Boolean(brandbook._example) || Boolean(file?.example);
+  const base = `/api/brandbook/${kit.id}`;
+  const stale = file && kit.updated_at && new Date(file.created_at) < new Date(kit.updated_at);
+
+  return (
+    <div className="rounded-2xl border border-accent/30 bg-accent/[0.06] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="label flex items-center gap-2">
+            <BookOpen className="h-3.5 w-3.5" /> Brandbook completo
+            <Example show={isExample} />
+          </div>
+          <h3 className="display mt-1 text-2xl text-ink">Manual de marca em HTML e PDF</h3>
+          <p className="mt-1 max-w-xl text-sm text-ink2">
+            Capa, manifesto, propósito, valores, posicionamento, público, personalidade, logotipo (construção, versões, usos incorretos), cores, tipografia, grafismo, imagem, linguagem, aplicações e regras rápidas. Mesmo padrão do manual do Studio.
+          </p>
+          {file ? (
+            <p className="mt-2 text-xs text-ink3">
+              Último arquivo: <b className="text-ink2">{file.name}</b> · {fmtDate(file.created_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              {stale ? <span className="ml-2 text-warn">o kit mudou depois; gere de novo para atualizar</span> : null}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-ink3">Ainda não há arquivo na Biblioteca. {ready ? 'Gere o brandbook para a IA escrever o manifesto, os valores e as regras que faltam.' : 'Complete as etapas 2 a 4 antes de gerar.'}</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ActionButton
+            variant={file && enriched ? 'glass' : 'primary'}
+            disabled={!ready}
+            action={() => generateBrandbookAction(kit.id)}
+            confirm={enriched ? 'Regerar o brandbook pede à IA um novo texto editorial (manifesto, valores, regras). O arquivo na Biblioteca é substituído. Continuar?' : undefined}
+            success="Brandbook gerado e salvo na Biblioteca"
+            afterPath="/marketing/brand"
+          >
+            <Sparkles className="h-4 w-4" /> {enriched ? 'Regerar brandbook (IA)' : 'Gerar brandbook completo (IA)'}
+          </ActionButton>
+          {enriched && (
+            <ActionButton variant="outline" size="sm" action={() => generateBrandbookAction(kit.id, { skipAI: true })} success="Arquivo atualizado com o kit atual">
+              <RefreshCw className="h-3.5 w-3.5" /> Atualizar arquivo
+            </ActionButton>
+          )}
+        </div>
+      </div>
+
+      {ready && (
+        <>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="subtle" size="sm" href={base} target="_blank" rel="noreferrer">
+              <ExternalLink className="h-3.5 w-3.5" /> Abrir em nova aba
+            </Button>
+            <Button variant="outline" size="sm" href={`${base}?download=1`}>
+              <Download className="h-3.5 w-3.5" /> Baixar HTML
+            </Button>
+            <Button variant="outline" size="sm" href={`${base}?format=pdf`}>
+              <FileDown className="h-3.5 w-3.5" /> Baixar PDF
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { setPreview((n) => n + 1); router.refresh(); }}>
+              <RefreshCw className="h-3.5 w-3.5" /> Atualizar preview
+            </Button>
+          </div>
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black">
+            <iframe key={preview} src={base} title={`Brandbook ${kit.version}`} className="block h-[560px] w-full" loading="lazy" />
+          </div>
+          <p className="mt-2 text-[11px] text-ink3">O HTML baixado embute fontes e imagens: abre em qualquer computador e pode ir direto para o cliente. O PDF sai em páginas de 1600 × 1000 px, um capítulo por página.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StepManual({ kit, brandbook, ready }: { kit: BrandKit; brandbook: BrandbookFile | null; ready: boolean }) {
   const manual = o(o(kit.applications).manual);
   const tokens = o(kit.tokens);
   const chapters = a(manual.capitulos);
   const skill = txt(manual.skill_md);
-  if (!chapters.length && !Object.keys(tokens).length) return <p className="text-sm text-ink3">Gere a etapa para montar o manual e os tokens.</p>;
+  if (!chapters.length && !Object.keys(tokens).length)
+    return (
+      <div className="space-y-6">
+        <BrandbookPanel kit={kit} file={brandbook} ready={ready} />
+        <p className="text-sm text-ink3">Gere a etapa para montar as regras rápidas, os tokens e a skill dos agentes.</p>
+      </div>
+    );
   return (
     <div className="space-y-6">
+      <BrandbookPanel kit={kit} file={brandbook} ready={ready} />
+      <div className="label">Regras rápidas, tokens e skill</div>
       <div className="grid gap-3 md:grid-cols-2">
         {chapters.map((c, i) => (
           <div key={i} className="rounded-2xl border border-white/[0.08] p-4">
@@ -626,13 +713,16 @@ export function BrandStepper({
   clientName,
   clientColor,
   versions,
+  brandbook = null,
 }: {
   kit: BrandKit;
   clientName: string;
   clientColor: string;
   versions: { id: string; version: number; status: BrandKit['status']; mode: Mode; approved_at?: string | null }[];
+  brandbook?: BrandbookFile | null;
 }) {
   const router = useRouter();
+  const brandbookReady = stepHasContent(kit, 2) && stepHasContent(kit, 3) && (stepHasContent(kit, 4) || Boolean(o(kit.tokens).accent));
   const [view, setView] = useState<number>(Math.min(6, Math.max(1, kit.step || 1)));
   const [modePending, startMode] = useTransition();
   const locked = ((kit.locked_fields || []) as string[]).filter(Boolean);
@@ -743,7 +833,7 @@ export function BrandStepper({
           {view === 3 && has && <StepVerbal data={verbal} />}
           {view === 4 && <StepVisual kit={kit} data={o(kit.visual)} clientName={clientName} clientColor={clientColor} />}
           {view === 5 && has && <StepAplicacoes data={o(kit.applications)} />}
-          {view === 6 && <StepManual kit={kit} />}
+          {view === 6 && <StepManual kit={kit} brandbook={brandbook} ready={brandbookReady} />}
 
           <div className="flex items-center justify-between pt-2">
             <Button variant="ghost" size="sm" disabled={view === 1} onClick={() => setView((v) => Math.max(1, v - 1))}>

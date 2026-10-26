@@ -5,6 +5,8 @@ import { Button, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { BrandStepper, StartKit } from './stepper';
 
 export const metadata = { title: 'Brand' };
+// Ações de IA (Opus/Fable com pensamento estendido) podem levar alguns minutos na Vercel.
+export const maxDuration = 300;
 
 export default async function BrandPage() {
   await requireUser();
@@ -15,6 +17,10 @@ export default async function BrandPage() {
   const d = await db();
   const kits = await d.list('brand_kits', { where: { client_id: client.id }, orderBy: 'version', desc: true });
   const kit = kits[0] || null;
+  const [bbAsset] = kit ? await d.list('assets', { where: { client_id: client.id, kind: 'brandbook' }, orderBy: 'created_at', desc: true, limit: 1 }) : [];
+  const brandbook = bbAsset
+    ? { id: bbAsset.id, url: bbAsset.url || '', name: bbAsset.name, created_at: bbAsset.created_at, example: Boolean((bbAsset.analysis as any)?.example), version: Number((bbAsset.analysis as any)?.version) || undefined }
+    : null;
 
   return (
     <div className="space-y-2">
@@ -45,6 +51,7 @@ export default async function BrandPage() {
           clientName={name}
           clientColor={client.brand_color || '#FF5B1F'}
           versions={kits.map((k) => ({ id: k.id, version: k.version, status: k.status, mode: k.mode, approved_at: k.approved_at }))}
+          brandbook={brandbook}
         />
       )}
     </div>

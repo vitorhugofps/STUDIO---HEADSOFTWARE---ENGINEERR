@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </span>
           <div className="leading-none">
             <div className="display text-[22px] text-ink">Impacto</div>
-            <div className="label mt-1">Headsoftware · Studio Impacto</div>
+            <div className="label mt-1">Sistema do Studio Impacto</div>
           </div>
         </div>
         <h1 className="display twotone text-[52px] leading-[0.92] text-ink">

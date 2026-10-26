@@ -1,22 +1,31 @@
-// IMPACTO HEADSOFTWARE · app desktop (macOS)
-// Sobe o servidor Next (standalone) dentro do app e abre uma janela com vidro nativo do macOS.
+// Impacto · app desktop (macOS)
+// Sobe o servidor Next (standalone) dentro do app, abre uma janela com vidro nativo do macOS
+// e oferece ao servidor um serviço local de PDF (Chromium do próprio Electron) para o brandbook.
 const { app, BrowserWindow, shell, nativeTheme, Menu, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 
+const APP_NAME = 'Impacto';
 const PORT = Number(process.env.IHS_PORT || 3741);
 const DEV_URL = process.env.IHS_DEV_URL || '';
 let server = null;
 let win = null;
+let pdfService = null;
 
 const userData = () => app.getPath('userData');
 
 /** Lê variáveis do arquivo .env na pasta de dados do app (gravado pelo instalador) ou do .env.local do projeto. */
 function loadEnv() {
   // Ordem: ajustes da máquina (userData/.env) > projeto (.env.local) > runtime.env embutido no pacote do time
-  const candidates = [path.join(userData(), '.env'), path.join(__dirname, '..', '.env.local'), path.join(__dirname, '..', '.env'), path.join(process.resourcesPath || '', 'app', 'runtime.env')];
+  const candidates = [
+    path.join(userData(), '.env'),
+    path.join(app.getPath('appData'), 'IMPACTO HEADSOFTWARE', '.env'), // instalações anteriores ao nome "Impacto"
+    path.join(__dirname, '..', '.env.local'),
+    path.join(__dirname, '..', '.env'),
+    path.join(process.resourcesPath || '', 'app', 'runtime.env'),
+  ];
   const env = {};
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
@@ -43,17 +52,53 @@ function waitFor(url, tries = 120) {
   });
 }
 
+/** Serviço de PDF: o servidor interno manda um HTML (arquivo temporário) e recebe o PDF impresso pelo Chromium do app. */
+function startPdfService() {
+  return new Promise((resolve) => {
+    const srv = http.createServer((req, res) => {
+      if (req.method !== 'POST' || req.url !== '/pdf') {
+        res.writeHead(404).end();
+        return;
+      }
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', async () => {
+        let hidden = null;
+        try {
+          const { file, width = 1600, height = 1000 } = JSON.parse(body || '{}');
+          if (!file || !fs.existsSync(file)) throw new Error('arquivo não encontrado');
+          hidden = new BrowserWindow({ show: false, width, height, webPreferences: { offscreen: false, contextIsolation: true, nodeIntegration: false } });
+          await hidden.loadFile(file);
+          await hidden.webContents.executeJavaScript('(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => new Promise(r => setTimeout(r, 400)))', true);
+          const pdf = await hidden.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, pageSize: { width: width / 96, height: height / 96 }, margins: { marginType: 'none' } });
+          res.writeHead(200, { 'content-type': 'application/pdf', 'content-length': pdf.length }).end(pdf);
+        } catch (e) {
+          res.writeHead(500, { 'content-type': 'text/plain' }).end(String(e && e.message ? e.message : e));
+        } finally {
+          if (hidden && !hidden.isDestroyed()) hidden.destroy();
+        }
+      });
+    });
+    srv.listen(0, '127.0.0.1', () => {
+      pdfService = srv;
+      resolve(`http://127.0.0.1:${srv.address().port}`);
+    });
+    srv.on('error', () => resolve(''));
+  });
+}
+
 async function startServer() {
   if (DEV_URL) return DEV_URL;
   const base = app.isPackaged ? path.join(process.resourcesPath, 'app') : path.join(__dirname, '..', '.next', 'standalone');
   const serverJs = path.join(base, 'server.js');
   if (!fs.existsSync(serverJs)) {
-    dialog.showErrorBox('IMPACTO HEADSOFTWARE', 'Build do app não encontrado. Rode "npm run build" na pasta do projeto ou use o instalador.');
+    dialog.showErrorBox(APP_NAME, 'Build do app não encontrado. Rode "npm run build" na pasta do projeto ou use o instalador.');
     app.quit();
     return null;
   }
   const dataDir = path.join(userData(), 'data');
   fs.mkdirSync(dataDir, { recursive: true });
+  const pdfUrl = await startPdfService();
   const env = {
     ...process.env,
     ...loadEnv(),
@@ -63,14 +108,33 @@ async function startServer() {
     HOSTNAME: '127.0.0.1',
     IHS_DATA_DIR: dataDir,
     IHS_DESKTOP: '1',
+    ...(pdfUrl ? { IHS_PDF_SERVICE: pdfUrl } : {}),
   };
   server = spawn(process.execPath, [serverJs], { env, cwd: base, stdio: 'inherit' });
   server.on('exit', (code) => {
     server = null;
-    if (code && win) dialog.showErrorBox('IMPACTO HEADSOFTWARE', `O servidor interno parou (código ${code}).`);
+    if (code && win) dialog.showErrorBox(APP_NAME, `O servidor interno parou (código ${code}).`);
   });
   await waitFor(`http://127.0.0.1:${PORT}/api/health`);
   return `http://127.0.0.1:${PORT}`;
+}
+
+const webPreferences = () => ({ preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, spellcheck: true });
+
+function wireLinks(w, url) {
+  w.webContents.setWindowOpenHandler(({ url: u }) => {
+    // Links internos abertos "em nova aba" (brandbook, arquivos) viram uma nova janela do app; externos vão para o navegador.
+    if (u.startsWith(url)) return { action: 'allow', overrideBrowserWindowOptions: { width: 1280, height: 900, title: APP_NAME, backgroundColor: '#0A0A0A', webPreferences: webPreferences() } };
+    if (u.startsWith('http')) shell.openExternal(u);
+    return { action: 'deny' };
+  });
+  w.webContents.on('will-navigate', (e, u) => {
+    if (!u.startsWith(url)) {
+      e.preventDefault();
+      shell.openExternal(u);
+    }
+  });
+  w.webContents.on('did-create-window', (child) => wireLinks(child, url));
 }
 
 function createWindow(url) {
@@ -80,34 +144,25 @@ function createWindow(url) {
     minWidth: 1024,
     minHeight: 680,
     show: false,
-    title: 'IMPACTO HEADSOFTWARE',
+    title: APP_NAME,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 18, y: 20 },
     vibrancy: 'under-window',
     visualEffectState: 'active',
     backgroundColor: '#00000000',
     transparent: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, spellcheck: true },
+    webPreferences: webPreferences(),
   });
   nativeTheme.themeSource = 'dark';
   win.once('ready-to-show', () => win.show());
-  win.webContents.setWindowOpenHandler(({ url: u }) => {
-    if (u.startsWith('http') && !u.startsWith(url)) shell.openExternal(u);
-    return { action: 'deny' };
-  });
-  win.webContents.on('will-navigate', (e, u) => {
-    if (!u.startsWith(url)) {
-      e.preventDefault();
-      shell.openExternal(u);
-    }
-  });
+  wireLinks(win, url);
   win.loadURL(url);
   win.on('closed', () => (win = null));
 }
 
 function buildMenu() {
   const template = [
-    { label: app.name, submenu: [{ role: 'about', label: 'Sobre o IMPACTO HEADSOFTWARE' }, { type: 'separator' }, { role: 'hide', label: 'Ocultar' }, { role: 'quit', label: 'Sair' }] },
+    { label: app.name, submenu: [{ role: 'about', label: `Sobre o ${APP_NAME}` }, { type: 'separator' }, { role: 'hide', label: 'Ocultar' }, { role: 'quit', label: 'Sair' }] },
     { label: 'Editar', submenu: [{ role: 'undo', label: 'Desfazer' }, { role: 'redo', label: 'Refazer' }, { type: 'separator' }, { role: 'cut', label: 'Recortar' }, { role: 'copy', label: 'Copiar' }, { role: 'paste', label: 'Colar' }, { role: 'selectAll', label: 'Selecionar tudo' }] },
     { label: 'Ver', submenu: [{ role: 'reload', label: 'Recarregar' }, { role: 'toggleDevTools', label: 'Ferramentas de desenvolvedor' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen', label: 'Tela cheia' }] },
     { label: 'Janela', submenu: [{ role: 'minimize', label: 'Minimizar' }, { role: 'close', label: 'Fechar' }] },
@@ -122,7 +177,7 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-app.setName('IMPACTO HEADSOFTWARE');
+app.setName(APP_NAME);
 
 app.whenReady().then(async () => {
   buildMenu();
@@ -130,7 +185,7 @@ app.whenReady().then(async () => {
     const url = await startServer();
     if (url) createWindow(url);
   } catch (e) {
-    dialog.showErrorBox('IMPACTO HEADSOFTWARE', `Não foi possível iniciar: ${e.message}`);
+    dialog.showErrorBox(APP_NAME, `Não foi possível iniciar: ${e.message}`);
     app.quit();
   }
   app.on('activate', () => {
@@ -144,4 +199,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (server) server.kill();
+  if (pdfService) pdfService.close();
 });
