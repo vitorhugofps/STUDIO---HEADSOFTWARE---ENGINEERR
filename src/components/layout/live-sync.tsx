@@ -59,6 +59,9 @@ export function LiveSync({ userId }: { userId: string }) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
+  const changed = useRef(new Set<string>());
+  const groupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivity = useRef(0);
 
   // Dados em tempo real (somente no modo Supabase: app do time e web)
   useEffect(() => {
@@ -101,6 +104,8 @@ export function LiveSync({ userId }: { userId: string }) {
           if (table === 'activity_log' && payload.eventType === 'INSERT') {
             const row = payload.new || {};
             if (row.actor_id && row.actor_id === userId) return; // a própria pessoa já vê o resultado
+            lastActivity.current = Date.now();
+            changed.current.clear();
             toast(`${row.actor_name || 'Alguém do time'} ${row.action || 'atualizou dados'}`, {
               id: `live-act-${row.id || Date.now()}`,
               description: 'Atualizado em tempo real',
@@ -112,12 +117,15 @@ export function LiveSync({ userId }: { userId: string }) {
             const row = payload.new || payload.old || {};
             const mine = row.created_by === userId || row.updated_by === userId || row.actor_id === userId;
             if (!mine) {
-              const verb = payload.eventType === 'INSERT' ? 'novo item' : payload.eventType === 'DELETE' ? 'item removido' : 'atualizado';
-              toast(`${TABLE_LABEL[table]}: ${verb}`, {
-                id: `live-${table}`,
-                description: 'A tela foi atualizada automaticamente.',
-                duration: 4000,
-              });
+              // Agrupa: um aviso só por rodada de mudanças; some se o histórico já disse quem fez o quê.
+              changed.current.add(TABLE_LABEL[table]);
+              if (groupTimer.current) clearTimeout(groupTimer.current);
+              groupTimer.current = setTimeout(() => {
+                const labels = Array.from(changed.current);
+                changed.current.clear();
+                if (!labels.length || Date.now() - lastActivity.current < 4000) return;
+                toast(`Atualizado: ${labels.join(', ')}`, { id: 'live-tables', description: 'Alguém do time mudou dados. A tela já está atualizada.', duration: 4000 });
+              }, 1500);
             }
           }
           scheduleRefresh();
@@ -138,6 +146,7 @@ export function LiveSync({ userId }: { userId: string }) {
       stopped = true;
       document.removeEventListener('focusout', onBlur);
       if (timer.current) clearTimeout(timer.current);
+      if (groupTimer.current) clearTimeout(groupTimer.current);
       sub.subscription.unsubscribe();
       if (channel) sb.removeChannel(channel);
     };
