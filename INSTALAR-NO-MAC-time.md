@@ -6,7 +6,8 @@ App para macOS do sistema operacional do Studio Impacto (CRM, marketing, tráfeg
 1. Peça ao Vitor o .zip do seu Mac: **apple-silicon** (M1, M2, M3, M4) ou **intel**.
 2. Dê dois cliques no .zip e arraste **Impacto.app** para a pasta **Aplicativos**.
 3. Como o app ainda não é assinado pela Apple, no primeiro clique o macOS avisa que "não foi possível verificar o desenvolvedor". Abra o **Terminal** e cole:
-   `xattr -dr com.apple.quarantine "/Applications/Impacto.app"`
+   `xattr -cr "/Applications/Impacto.app" && codesign --force --deep --sign - "/Applications/Impacto.app"`
+   (o primeiro tira a trava de "baixado da internet"; o segundo assina o app no seu Mac. Sem isso o macOS diz que o app "está danificado".)
    Depois abra o app normalmente (ou vá em Ajustes do Sistema → Privacidade e Segurança → "Abrir mesmo assim").
 
 ### Entrar

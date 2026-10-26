@@ -60,7 +60,9 @@ mkdir -p "$DATA_DIR"
 cp .env.local "$DATA_DIR/.env"
 rm -rf "/Applications/Impacto.app"
 cp -R "$APP" /Applications/
-xattr -dr com.apple.quarantine "/Applications/Impacto.app" 2>/dev/null || true
+xattr -cr "/Applications/Impacto.app" 2>/dev/null || true
+# Assinatura local (ad-hoc): sem ela o macOS em chip Apple diz que o app "está danificado".
+codesign --force --deep --sign - "/Applications/Impacto.app" 2>/dev/null || true
 ok "App instalado em /Applications/Impacto.app"
 echo
 bold "Abrindo…"

@@ -18,5 +18,5 @@ bold "Pacotes prontos em desktop/dist:"
 ls -1 dist/*.zip
 echo
 echo "Quem receber precisa, após copiar para Aplicativos, rodar uma vez no Terminal:"
-echo '  xattr -dr com.apple.quarantine "/Applications/Impacto.app"'
+echo '  xattr -cr "/Applications/Impacto.app" && codesign --force --deep --sign - "/Applications/Impacto.app"'
 echo "(ou Ajustes do Sistema → Privacidade e Segurança → Abrir mesmo assim). Para eliminar esse passo, assine o app com um Apple Developer ID."
