@@ -1,5 +1,5 @@
-// Impacto · app desktop (macOS)
-// Sobe o servidor Next (standalone) dentro do app, abre uma janela com vidro nativo do macOS
+// Impacto · app desktop (macOS e Windows 10+)
+// Sobe o servidor Next (standalone) dentro do app, abre a janela (vidro nativo no macOS, barra escura no Windows)
 // e oferece ao servidor um serviço local de PDF (Chromium do próprio Electron) para o brandbook.
 const { app, BrowserWindow, shell, nativeTheme, Menu, dialog } = require('electron');
 const path = require('node:path');
@@ -8,6 +8,8 @@ const http = require('node:http');
 const { spawn } = require('node:child_process');
 
 const APP_NAME = 'Impacto';
+const IS_MAC = process.platform === 'darwin';
+const IS_WIN = process.platform === 'win32';
 const PORT = Number(process.env.IHS_PORT || 3741);
 const DEV_URL = process.env.IHS_DEV_URL || '';
 let server = null;
@@ -110,7 +112,7 @@ async function startServer() {
     IHS_DESKTOP: '1',
     ...(pdfUrl ? { IHS_PDF_SERVICE: pdfUrl } : {}),
   };
-  server = spawn(process.execPath, [serverJs], { env, cwd: base, stdio: 'inherit' });
+  server = spawn(process.execPath, [serverJs], { env, cwd: base, stdio: 'inherit', windowsHide: true });
   server.on('exit', (code) => {
     server = null;
     if (code && win) dialog.showErrorBox(APP_NAME, `O servidor interno parou (código ${code}).`);
@@ -138,6 +140,9 @@ function wireLinks(w, url) {
 }
 
 function createWindow(url) {
+  const platformWindow = IS_MAC
+    ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 20 }, vibrancy: 'under-window', visualEffectState: 'active', backgroundColor: '#00000000' }
+    : { backgroundColor: '#0A0A0A', autoHideMenuBar: true };
   win = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -145,14 +150,11 @@ function createWindow(url) {
     minHeight: 680,
     show: false,
     title: APP_NAME,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 18, y: 20 },
-    vibrancy: 'under-window',
-    visualEffectState: 'active',
-    backgroundColor: '#00000000',
     transparent: false,
+    ...platformWindow,
     webPreferences: webPreferences(),
   });
+  if (IS_WIN) win.maximize();
   nativeTheme.themeSource = 'dark';
   win.once('ready-to-show', () => win.show());
   wireLinks(win, url);
@@ -161,6 +163,18 @@ function createWindow(url) {
 }
 
 function buildMenu() {
+  if (IS_WIN) {
+    // No Windows o menu fica escondido (Alt mostra); mantém só os atalhos úteis.
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        { label: 'Arquivo', submenu: [{ label: 'Pasta de dados do app', click: () => shell.openPath(userData()) }, { type: 'separator' }, { role: 'quit', label: 'Sair' }] },
+        { label: 'Editar', submenu: [{ role: 'undo', label: 'Desfazer' }, { role: 'redo', label: 'Refazer' }, { type: 'separator' }, { role: 'cut', label: 'Recortar' }, { role: 'copy', label: 'Copiar' }, { role: 'paste', label: 'Colar' }, { role: 'selectAll', label: 'Selecionar tudo' }] },
+        { label: 'Ver', submenu: [{ role: 'reload', label: 'Recarregar' }, { role: 'toggleDevTools', label: 'Ferramentas de desenvolvedor' }, { type: 'separator' }, { role: 'resetZoom', label: 'Tamanho real' }, { role: 'zoomIn', label: 'Aumentar' }, { role: 'zoomOut', label: 'Diminuir' }, { type: 'separator' }, { role: 'togglefullscreen', label: 'Tela cheia' }] },
+        { label: 'Ajuda', submenu: [{ label: 'Site do Studio Impacto', click: () => shell.openExternal('https://studioimpacto.com.br') }] },
+      ]),
+    );
+    return;
+  }
   const template = [
     { label: app.name, submenu: [{ role: 'about', label: `Sobre o ${APP_NAME}` }, { type: 'separator' }, { role: 'hide', label: 'Ocultar' }, { role: 'quit', label: 'Sair' }] },
     { label: 'Editar', submenu: [{ role: 'undo', label: 'Desfazer' }, { role: 'redo', label: 'Refazer' }, { type: 'separator' }, { role: 'cut', label: 'Recortar' }, { role: 'copy', label: 'Copiar' }, { role: 'paste', label: 'Colar' }, { role: 'selectAll', label: 'Selecionar tudo' }] },
@@ -178,8 +192,22 @@ function buildMenu() {
 }
 
 app.setName(APP_NAME);
+if (IS_WIN) app.setAppUserModelId('br.com.studioimpacto.impacto');
+
+// Uma janela só: abrir o atalho de novo traz o app para a frente em vez de subir outro servidor.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
 
 app.whenReady().then(async () => {
+  if (!app.hasSingleInstanceLock()) return;
   buildMenu();
   try {
     const url = await startServer();

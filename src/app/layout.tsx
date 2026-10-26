@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#0A0A0A', width: 'device-width', initialScale: 1 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('ihs.theme');if(t==='light')document.documentElement.classList.add('light');if(navigator.userAgent.indexOf('Electron')>-1||window.ihs){document.documentElement.classList.add('electron')}}catch(e){}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem('ihs.theme');if(t==='light')document.documentElement.classList.add('light');if(navigator.userAgent.indexOf('Electron')>-1||window.ihs){document.documentElement.classList.add('electron');if(window.ihs&&window.ihs.platform==='win32')document.documentElement.classList.add('win')}}catch(e){}})();`;
 
 const FOUN = ['SemiBold', 'Bold'].filter((w) => fs.existsSync(path.join(process.cwd(), 'public', 'fonts', `Foun-${w}.woff2`)));
 const founCss = FOUN.map((w) => `@font-face{font-family:'Foun';src:url('/fonts/Foun-${w}.woff2') format('woff2');font-weight:${w === 'Bold' ? 700 : 600};font-display:swap}`).join('');

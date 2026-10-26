@@ -47,6 +47,13 @@ html.light {
 html.electron:not(.light) {
   --app-bg: rgba(10, 10, 10, 0.86);
 }
+/* Windows: janela com barra nativa, fundo sólido e nada de área de arrastar dentro da página. */
+html.electron.win:not(.light) {
+  --app-bg: rgb(10, 10, 10);
+}
+html.win .drag-region {
+  -webkit-app-region: no-drag;
+}
 
 * {
   border-color: rgb(var(--line) / 0.08);

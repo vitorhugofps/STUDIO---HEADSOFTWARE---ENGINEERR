@@ -65,3 +65,8 @@ npm run app:build    # build + Impacto.app (dmg e dir em desktop/dist)
 ## Próximas fases
 
 Publicação no Instagram e criação de campanhas pela Marketing API da Meta (exige App Review), envio de relatórios por Resend (domínio verificado), assinatura eletrônica, cobrança Pix/boleto, NFS-e, worker de render de vídeo (ffmpeg/Remotion/HyperFrames) e agente local no Mac do editor.
+
+## Windows (10 e 11, 64 bits)
+- Pacotes: `desktop/dist/Impacto-Setup-<versão>-windows-x64.exe` (instalador NSIS por usuário, sem admin) e a versão portátil (pasta `win-unpacked` compactada).
+- Gerar: `cd desktop && npx electron-builder --win nsis --x64 --config electron-builder.yml` (no Linux/macOS precisa do Wine para gravar ícone e versão no .exe). Faça antes o `npm run build` com o `.env.local` presente, porque as variáveis `NEXT_PUBLIC_SUPABASE_*` entram no código do navegador na hora do build.
+- Guia do time: `INSTALAR-NO-WINDOWS-time.md`.

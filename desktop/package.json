@@ -2,14 +2,15 @@
   "name": "impacto-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Impacto para macOS",
+  "description": "Impacto para macOS e Windows 10+",
   "main": "main.cjs",
   "author": "Studio Impacto",
   "scripts": {
     "dev": "IHS_DEV_URL=http://127.0.0.1:3741 electron .",
     "start": "electron .",
     "dist": "electron-builder --mac --config electron-builder.yml",
-    "dist:dir": "electron-builder --mac dir --config electron-builder.yml"
+    "dist:dir": "electron-builder --mac dir --config electron-builder.yml",
+    "dist:win": "electron-builder --win nsis --x64 --config electron-builder.yml"
   },
   "devDependencies": {
     "electron": "^33.2.1",
