@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { hasAIKey } from '@/lib/ai/claude';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import { LiveSync } from '@/components/layout/live-sync';
 import { logoutAction, markNotificationsReadAction, setActiveClientAction } from '@/lib/actions/common';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen">
+      <LiveSync userId={user.id} />
       <Sidebar user={user} badges={{ aprovacoes: pendingItems.length }} logoutAction={logoutAction} />
       <div className="app-main pr-3 transition-[padding] duration-300">
         <Topbar

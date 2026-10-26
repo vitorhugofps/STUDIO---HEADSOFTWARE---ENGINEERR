@@ -13,9 +13,9 @@ const DOMAIN = 'headsoftware.studioimpacto.com.br';
 const PASSWORD = process.env.IHS_DEFAULT_PASSWORD || 'impacto2026';
 const TEAM = [
   { username: 'VITOR', full_name: 'Vitor Filgueiras', role: 'admin', title: 'Head de Marketing e Engenharia' },
-  { username: 'MARCOS', full_name: 'Marcos', role: 'developer', title: 'System Developer' },
-  { username: 'PEDROPAULO', full_name: 'Pedro Paulo', role: 'comercial', title: 'Sales' },
-  { username: 'YURI', full_name: 'Yuri', role: 'editor', title: 'Video Editor' },
+  { username: 'MARCOS', full_name: 'Marcos', role: 'admin', title: 'System Developer' },
+  { username: 'PEDROPAULO', full_name: 'Pedro Paulo', role: 'admin', title: 'Sales' },
+  { username: 'YURI', full_name: 'Yuri', role: 'admin', title: 'Video Editor' },
 ];
 for (const t of TEAM) {
   const email = `${t.username.toLowerCase()}@${DOMAIN}`;

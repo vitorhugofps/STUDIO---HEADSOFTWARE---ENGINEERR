@@ -10,9 +10,9 @@ import type { DB } from './types';
 
 export const TEAM = [
   { id: '00000000-0000-4000-8000-000000000001', username: 'VITOR', full_name: 'Vitor Filgueiras', role: 'admin', title: 'Head de Marketing e Engenharia' },
-  { id: '00000000-0000-4000-8000-000000000002', username: 'MARCOS', full_name: 'Marcos', role: 'developer', title: 'System Developer' },
-  { id: '00000000-0000-4000-8000-000000000003', username: 'PEDROPAULO', full_name: 'Pedro Paulo', role: 'comercial', title: 'Sales' },
-  { id: '00000000-0000-4000-8000-000000000004', username: 'YURI', full_name: 'Yuri', role: 'editor', title: 'Video Editor' },
+  { id: '00000000-0000-4000-8000-000000000002', username: 'MARCOS', full_name: 'Marcos', role: 'admin', title: 'System Developer' },
+  { id: '00000000-0000-4000-8000-000000000003', username: 'PEDROPAULO', full_name: 'Pedro Paulo', role: 'admin', title: 'Sales' },
+  { id: '00000000-0000-4000-8000-000000000004', username: 'YURI', full_name: 'Yuri', role: 'admin', title: 'Video Editor' },
 ] as const;
 
 export const DEFAULT_PASSWORD = 'impacto2026';
