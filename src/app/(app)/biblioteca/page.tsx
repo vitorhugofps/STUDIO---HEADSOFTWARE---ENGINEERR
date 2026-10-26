@@ -32,6 +32,8 @@ const ASSET_KIND: Record<string, string> = {
   video_bruto: 'Vídeo bruto',
   audio: 'Áudio',
   manual: 'Manual',
+  brandbook: 'Brandbook',
+  imagem_ia: 'Imagem (IA)',
   documento: 'Documento',
   drive_link: 'Link do Drive',
   referencia: 'Referência',

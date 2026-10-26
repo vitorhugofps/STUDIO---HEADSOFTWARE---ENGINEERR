@@ -12,6 +12,9 @@ App para macOS do sistema operacional do Studio Impacto (CRM, marketing, tráfeg
 ### Entrar
 Usuário **VITOR**, **MARCOS**, **PEDROPAULO** ou **YURI** · senha inicial `impacto2026` (troque em *User*).
 
+### Na web
+A mesma plataforma roda na Vercel (link enviado pelo Vitor), com os mesmos usuários e os mesmos dados. O app no Mac é o mais completo (PDF do brandbook em um clique); na web, o PDF sai pela caixa de impressão do navegador ("Salvar como PDF").
+
 ### Observações
-- Chaves de IA (Anthropic e OpenAI) são configuradas em *Settings → Integrações* por quem for admin ou developer, e ficam só na máquina.
-- Uploads ficam na pasta de dados do app em cada Mac; para vídeos grandes, use o link do Google Drive.
+- Chaves de IA (Claude e ChatGPT) são configuradas uma vez em *Settings → Integrações* por quem for admin e valem para todo o time, no app e na web.
+- Arquivos enviados ficam no Supabase Storage do Studio, visíveis para todos; para vídeos muito grandes, use o link do Google Drive.
