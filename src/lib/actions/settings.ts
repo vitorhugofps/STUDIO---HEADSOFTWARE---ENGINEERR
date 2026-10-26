@@ -2,14 +2,14 @@
 
 /**
  * Ações de Settings (somente admin e developer) e da página User (qualquer usuário logado).
- * Segredos ficam no config.json do servidor e nunca voltam para o navegador.
+ * Segredos ficam no config.json do servidor (e, no Supabase, na linha compartilhada app_config) e nunca voltam para o navegador.
  * Este arquivo é 'use server': só funções async podem ser exportadas.
  */
 
 import { revalidatePath } from 'next/cache';
-import { db, logActivity } from '@/lib/db';
+import { db, logActivity, saveConfig } from '@/lib/db';
 import { changePassword, getSession } from '@/lib/auth';
-import { getSecret, readConfig, writeConfig, type AppConfig } from '@/lib/config';
+import { getSecret, type AppConfig } from '@/lib/config';
 import type { DB, Service } from '@/lib/db/types';
 
 type Fail = { ok: false; error: string };
@@ -22,12 +22,6 @@ async function settingsUser() {
   if (!user || !['admin', 'developer'].includes(user.role)) return null;
   return user;
 }
-
-/** writeConfig engole erro de disco (ambiente somente leitura). Relemos para saber se gravou. */
-function wasPersisted(next: AppConfig) {
-  return readConfig().updatedAt === next.updatedAt;
-}
-const READ_ONLY = 'Não foi possível gravar neste ambiente (somente leitura). Use variáveis de ambiente.';
 
 /* ------------------------------------------------------------------ */
 /* Studio                                                              */
@@ -43,8 +37,9 @@ export async function saveStudioAction(fd: FormData) {
   if (!studio.name) return fail('Informe o nome do Studio.');
   if (studio.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(studio.email)) return fail('E-mail inválido.');
 
-  const next = writeConfig({ studio });
-  if (!wasPersisted(next)) return fail(READ_ONLY);
+  // Supabase: linha compartilhada do time (só admin grava). Local: config.json. Se não gravar, volta o motivo.
+  const saved = await saveConfig({ studio });
+  if (!saved.ok) return fail(saved.error);
   const d = await db();
   await logActivity(d, { actor_id: user.id, actor_name: user.name, action: 'atualizou os dados do Studio', entity: 'settings' });
   revalidatePath('/settings');
@@ -104,8 +99,8 @@ export async function saveSecretsAction(fd: FormData) {
   }
   if (!Object.keys(patch).length) return fail('Nada para salvar.');
 
-  const next = writeConfig(patch);
-  if (!wasPersisted(next)) return fail(READ_ONLY);
+  const saved = await saveConfig(patch);
+  if (!saved.ok) return fail(saved.error);
 
   const d = await db();
   for (const s of SECRETS) {
@@ -134,8 +129,8 @@ export async function saveModelsAction(fd: FormData) {
   if (!COPY_MODELS.includes(copy)) return fail('Modelo de copy inválido.');
   const effort = String(fd.get('anthropicEffort') || 'high');
   if (!EFFORTS.includes(effort)) return fail('Esforço inválido.');
-  const next = writeConfig({ anthropicModelStrategy: strategy, anthropicModelCopy: copy, anthropicEffort: effort });
-  if (!wasPersisted(next)) return fail(READ_ONLY);
+  const saved = await saveConfig({ anthropicModelStrategy: strategy, anthropicModelCopy: copy, anthropicEffort: effort });
+  if (!saved.ok) return fail(saved.error);
   const d = await db();
   await logActivity(d, { actor_id: user.id, actor_name: user.name, action: `trocou os modelos de IA (estratégia ${strategy} · esforço ${effort}, copy ${copy})`, entity: 'settings' });
   revalidatePath('/settings');
