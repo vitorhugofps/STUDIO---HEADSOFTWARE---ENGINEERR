@@ -39,7 +39,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="glass-strong mt-8 rounded-3xl p-6">
           <LoginForm action={loginAction} next={sp.next || '/'} mode={isSupabaseMode() ? 'supabase' : 'local'} />
         </div>
-        <p className="mt-6 text-[11px] text-ink3">Uberlândia, MG · {new Date().getFullYear()} · Feito em set, não em prompt.</p>
+        <a href="/download" className="mt-5 inline-flex items-center gap-2 text-xs text-ink2 underline-offset-4 hover:text-ink hover:underline">
+          Baixar o app para Windows ou instalar no computador
+        </a>
+        <p className="mt-4 text-[11px] text-ink3">Uberlândia, MG · {new Date().getFullYear()} · Feito em set, não em prompt.</p>
       </div>
     </main>
   );

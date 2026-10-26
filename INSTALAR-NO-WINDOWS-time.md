@@ -18,3 +18,6 @@ Usuário **VITOR**, **MARCOS**, **PEDROPAULO** ou **YURI** · senha inicial `imp
 - Dados locais e configurações ficam em `%APPDATA%\Impacto`. Desinstalar pelo Painel de Controle mantém essa pasta.
 - No Windows o menu fica escondido: aperte **Alt** para ver (Recarregar, Tela cheia, Pasta de dados).
 - Também dá para usar pelo navegador: https://impacto-mu.vercel.app
+
+### Atualização (26/10): instalador leve pelo site
+O jeito recomendado agora é o instalador leve: abra **https://impacto-mu.vercel.app/download** e clique em **Baixar para Windows** (150 KB). Ele cria o app Impacto, que abre a plataforma numa janela própria pelo Microsoft Edge do Windows, com login, dados e tempo real iguais à versão web. O instalador completo (`Impacto-Setup-…exe`) fica como alternativa.

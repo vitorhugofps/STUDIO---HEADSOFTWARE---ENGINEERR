@@ -8,7 +8,8 @@ export const metadata: Metadata = {
   title: { default: 'Impacto', template: '%s · Impacto' },
   description: 'Sistema operacional do Studio Impacto: clientes, marketing, tráfego, marca, vídeo, vendas e financeiro.',
   applicationName: 'Impacto',
-  icons: { icon: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/icon-192.png' },
+  manifest: '/manifest.webmanifest',
 };
 
 export const viewport: Viewport = { themeColor: '#0A0A0A', width: 'device-width', initialScale: 1 };
