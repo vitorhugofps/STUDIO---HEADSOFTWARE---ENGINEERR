@@ -1,4 +1,4 @@
--- IMPACTO HEADSOFTWARE · esquema inicial (Supabase / Postgres)
+-- Impacto · esquema inicial (Supabase / Postgres)
 create extension if not exists pgcrypto;
 
 create table if not exists public.profiles (

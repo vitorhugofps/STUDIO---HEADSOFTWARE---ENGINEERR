@@ -1,27 +1,17 @@
 'use server';
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { db, logActivity } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { generateJSON } from '@/lib/ai/claude';
 import { PROMPTS, STUDIO_SYSTEM, clientBrief } from '@/lib/ai/prompts';
-import { dataDir } from '@/lib/config';
 import { slugify } from '@/lib/utils';
+import { putFile } from '@/lib/storage';
 import { buildBrandbook } from '@/lib/brandbook/build';
 import type { BrandKit } from '@/lib/db/types';
 
 const fail = (error: string) => ({ ok: false as const, error });
 const obj = (v: unknown): Record<string, any> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : {});
-
-/** Grava um arquivo na pasta de dados e devolve o caminho relativo e a URL servida pelo app. */
-async function storeFile(rel: string, data: Buffer): Promise<{ path: string; url: string }> {
-  const abs = path.join(dataDir(), rel);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, data);
-  return { path: rel, url: `/api/files/${rel.split(path.sep).join('/')}` };
-}
 
 function kitSummary(kit: BrandKit) {
   const apps = obj(kit.applications);
@@ -74,8 +64,9 @@ export async function generateBrandbookAction(kitId: string, opts: { skipAI?: bo
   const fresh = (await d.get('brand_kits', kitId)) || kit;
   const bundle = await buildBrandbook(d, fresh, { selfContained: true });
   const slug = slugify(name).slice(0, 40) || 'marca';
-  const rel = path.join('uploads', client.id, `brandbook-${slug}-v${fresh.version}.html`);
-  const stored = await storeFile(rel, Buffer.from(bundle.html, 'utf8'));
+  // Mesmo lugar dos uploads (Supabase Storage no time e na Vercel; pasta de dados no modo local).
+  const rel = `uploads/${client.id}/brandbook-${slug}-v${fresh.version}.html`;
+  const stored = await putFile(rel, Buffer.from(bundle.html, 'utf8'), 'text/html; charset=utf-8');
 
   // Substitui o brandbook anterior da mesma versão na Biblioteca
   const previous = await d.list('assets', { where: { client_id: client.id, kind: 'brandbook' } });

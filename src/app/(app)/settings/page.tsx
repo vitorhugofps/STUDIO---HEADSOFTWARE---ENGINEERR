@@ -1,7 +1,7 @@
 import { requireRole } from '@/lib/auth';
 import { STUDIO_DEFAULTS, isSupabaseMode, readConfig, supabaseEnv, type AppConfig } from '@/lib/config';
 import { resolveModel, resolveEffort, STRATEGY_MODELS, COPY_MODELS, EFFORTS } from '@/lib/ai/claude';
-import { openaiModels, fallbackEnabled } from '@/lib/ai/openai';
+import { IMAGE_MODELS, openaiImageModel, type ImageModel } from '@/lib/ai/openai';
 import { IntegrationTest } from './test-button';
 import { saveOpenAIAction } from '@/lib/actions/integrations';
 import { db } from '@/lib/db';
@@ -202,12 +202,17 @@ function IntegrationHead({ name, what, ok, label }: { name: string; what: string
   );
 }
 
+const IMAGE_MODEL_LABEL: Record<ImageModel, string> = {
+  'gpt-image-1': 'gpt-image-1 · recomendado',
+  'gpt-image-1-mini': 'gpt-image-1-mini · mais barato',
+  'dall-e-3': 'dall-e-3 · anterior',
+};
+
 function IntegrationsTab({ view }: { view: SettingsView }) {
   const supabase = isSupabaseMode();
   const { url } = supabaseEnv();
   const { anthropicApiKey: anthropic, openaiApiKey: openai, metaAccessToken: meta, resendApiKey: resend, apifyToken: apify } = view.secrets;
-  const oa = openaiModels();
-  const fallback = fallbackEnabled();
+  const imageModel = openaiImageModel();
 
   return (
     <div className="space-y-4">
@@ -238,22 +243,19 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
         </Card>
 
         <Card className="space-y-4 p-5">
-          <IntegrationHead name="OpenAI (ChatGPT)" what="Reserva do Claude e motor de imagens (moodboards, fundos, thumbnails). Claude continua primeiro em toda execução." ok={openai.ok} label={openai.label} />
-          <ActionForm action={saveOpenAIAction} success="OpenAI salva" resetOnSuccess className="space-y-3">
+          <IntegrationHead name="ChatGPT · Imagens" what="Usado só para criar e gerar imagens (moodboards, imagens de apoio, variações). Todo texto, estratégia e roteiro continuam no Claude." ok={openai.ok} label={openai.label} />
+          <ActionForm action={saveOpenAIAction} success="ChatGPT (imagens) salvo" resetOnSuccess className="space-y-3">
             <SecretInput state={openai} name="openaiApiKey" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Modelo de texto" hint="Usado só como reserva">
-                <Input key={oa.text} name="openaiTextModel" defaultValue={oa.text} spellCheck={false} />
-              </Field>
-              <Field label="Modelo de imagem" hint="gpt-image-1 recomendado">
-                <Input key={oa.image} name="openaiImageModel" defaultValue={oa.image} spellCheck={false} />
-              </Field>
-            </div>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-ink2">
-              <input type="checkbox" name="aiFallbackToOpenAI" defaultChecked={fallback} className="h-3.5 w-3.5 accent-accent" />
-              Usar o ChatGPT quando a chamada ao Claude falhar ou não houver chave da Anthropic
-            </label>
-            <SubmitButton variant="subtle">Salvar OpenAI</SubmitButton>
+            <Field label="Modelo de imagem" hint="Testar conexão confere se a chave acessa o modelo escolhido.">
+              <Select key={imageModel} name="openaiImageModel" defaultValue={imageModel}>
+                {IMAGE_MODELS.map((m) => (
+                  <option key={m} value={m}>
+                    {IMAGE_MODEL_LABEL[m]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <SubmitButton variant="subtle">Salvar ChatGPT</SubmitButton>
           </ActionForm>
           <IntegrationTest provider="openai" disabled={!openai.ok} />
         </Card>
@@ -304,7 +306,7 @@ function IntegrationsTab({ view }: { view: SettingsView }) {
           </div>
         </Card>
       </div>
-      <p className="text-xs text-ink3">As chaves ficam só no servidor. A tela mostra apenas se existem, nunca o valor. Política de IA: Claude (Opus 5.5 ou Fable 5.1 na estratégia, Sonnet 5.5 na copy) executa tudo; o ChatGPT entra nas imagens e como reserva.</p>
+      <p className="text-xs text-ink3">As chaves ficam só no servidor. A tela mostra apenas se existem, nunca o valor. Política de IA: todo texto, estratégia e roteiro ficam com o Claude (Opus 5.5 ou Fable 5.1 na estratégia, Sonnet 5.5 na copy); o ChatGPT é usado só para criar imagens.</p>
     </div>
   );
 }
@@ -381,7 +383,7 @@ async function AITab() {
               </Field>
               <ModelSelect name="anthropicModelCopy" label="Modelo de copy" hint="Plano de conteúdo, revisão, roteiros, anúncios e insights." options={[...COPY_MODELS]} current={resolveModel('copy')} />
             </div>
-            <p className="text-xs text-ink3">Claude executa tudo. ChatGPT (OpenAI) só entra em imagens e como reserva, configurado em Integrações.</p>
+            <p className="text-xs text-ink3">Claude executa todo texto, estratégia e roteiro. O ChatGPT (OpenAI) é usado só para criar imagens, configurado em Integrações.</p>
             <SubmitButton>Salvar modelos</SubmitButton>
           </ActionForm>
         </Card>

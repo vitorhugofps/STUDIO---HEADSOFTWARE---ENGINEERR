@@ -1,4 +1,4 @@
--- IMPACTO HEADSOFTWARE · arquivos (Supabase Storage) e configuração compartilhada do time.
+-- Impacto · arquivos (Supabase Storage) e configuração compartilhada do time.
 -- Já aplicada no projeto do time; fica aqui para recriar o ambiente. Pode rodar de novo sem efeito colateral.
 
 -- 1) Bucket privado "files": uploads de clientes e do Studio e imagens geradas por IA.

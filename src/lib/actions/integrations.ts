@@ -8,9 +8,9 @@
 import { revalidatePath } from 'next/cache';
 import { db, logActivity, saveConfig } from '@/lib/db';
 import { getSession } from '@/lib/auth';
-import { getSecret, readConfig } from '@/lib/config';
-import { anthropicTest, estimateCost } from '@/lib/ai/claude';
-import { hasOpenAIKey, openaiImage, openaiTest } from '@/lib/ai/openai';
+import { getSecret, readConfig, type AppConfig } from '@/lib/config';
+import { anthropicTest } from '@/lib/ai/claude';
+import { IMAGE_MODELS, OpenAIError, hasOpenAIKey, isImageModel, isImageSize, openaiImage, openaiImageModel, openaiTest, type ImageSize } from '@/lib/ai/openai';
 import { uploadKey } from '@/lib/file-keys';
 import { putFile } from '@/lib/storage';
 
@@ -113,53 +113,60 @@ export async function testIntegrationAction(provider: Provider): Promise<{ ok: b
   return { ...result, detail: `${result.detail} (${ms} ms)` };
 }
 
-/** Salva chave e modelos da OpenAI e a política de reserva. */
+/**
+ * Salva a chave e o modelo de imagem da OpenAI. O ChatGPT só gera imagens: não há modelo de texto nem reserva.
+ * Chave em branco mantém a atual; clear_openaiApiKey remove a salva em Settings. Nunca devolve valor de segredo.
+ */
 export async function saveOpenAIAction(fd: FormData) {
   const user = await getSession();
   if (!user || !['admin', 'developer'].includes(user.role)) return fail('Sem permissão.');
-  const patch: Record<string, unknown> = {};
+  const patch: Partial<AppConfig> = {};
   const key = String(fd.get('openaiApiKey') || '').trim();
   if (fd.get('clear_openaiApiKey')) patch.openaiApiKey = '';
   else if (key) {
     if (/\s/.test(key) || key.length > 400) return fail('Chave da OpenAI inválida.');
     patch.openaiApiKey = key;
   }
-  const text = String(fd.get('openaiTextModel') || '').trim();
-  const image = String(fd.get('openaiImageModel') || '').trim();
-  if (text && !/^[a-z0-9.\-_]{3,60}$/i.test(text)) return fail('Nome do modelo de texto inválido.');
-  if (image && !/^[a-z0-9.\-_]{3,60}$/i.test(image)) return fail('Nome do modelo de imagem inválido.');
-  if (fd.has('openaiTextModel')) patch.openaiTextModel = text;
-  if (fd.has('openaiImageModel')) patch.openaiImageModel = image;
-  patch.aiFallbackToOpenAI = ['on', 'true', '1'].includes(String(fd.get('aiFallbackToOpenAI') || ''));
+  if (fd.has('openaiImageModel')) {
+    const image = String(fd.get('openaiImageModel') || '').trim();
+    if (!isImageModel(image)) return fail(`Modelo de imagem inválido. Use ${IMAGE_MODELS.join(', ')}.`);
+    patch.openaiImageModel = image;
+  }
+  if (!Object.keys(patch).length) return fail('Nada para salvar.');
   // Supabase: linha compartilhada do time (só admin grava). Local: config.json. Se não gravar, volta o motivo.
   const saved = await saveConfig(patch as any);
   if (!saved.ok) return fail(saved.error);
   const d = await db();
   const rows = await d.list('integrations', { where: { provider: 'openai', scope: 'studio' } });
-  const connected = Boolean(getSecret('openaiApiKey'));
+  const connected = hasOpenAIKey();
   const p = { status: connected ? ('conectado' as const) : ('pendente' as const), connected_at: connected ? new Date().toISOString() : null };
   if (rows[0]) await d.update('integrations', rows[0].id, p as any);
   else await d.insert('integrations', { provider: 'openai', scope: 'studio', ...p } as any);
-  await logActivity(d, { actor_id: user.id, actor_name: user.name, action: 'atualizou a integração OpenAI (ChatGPT)', entity: 'settings' });
+  // Só os nomes dos campos vão para o histórico, nunca os valores.
+  await logActivity(d, { actor_id: user.id, actor_name: user.name, action: 'atualizou o ChatGPT · Imagens (chave e modelo de imagem)', entity: 'settings' });
   revalidatePath('/settings');
   return { ok: true as const };
 }
 
-/** Gera uma imagem com o ChatGPT e salva na Biblioteca (asset do cliente ou do Studio). */
-export async function generateImageAction(input: { prompt: string; clientId?: string | null; kind?: string; size?: '1024x1024' | '1024x1536' | '1536x1024'; name?: string }) {
+/** Gera uma imagem com o ChatGPT e salva na Biblioteca (asset do cliente ou do Studio). É o único uso da OpenAI no Studio. */
+export async function generateImageAction(input: { prompt: string; clientId?: string | null; kind?: string; size?: ImageSize; name?: string }) {
   const user = await getSession();
   if (!user) return fail('Não autorizado');
   const prompt = (input.prompt || '').trim();
   if (prompt.length < 8) return fail('Descreva a imagem com mais detalhes.');
   if (!hasOpenAIKey()) return fail('Geração de imagem usa o ChatGPT: cole a chave da OpenAI em Settings → Integrações.');
   const d = await db();
+  // O id do cliente chega do formulário e vira nome de pasta no disco: só vale cliente que existe.
+  const client = input.clientId ? await d.get('clients', input.clientId).catch(() => null) : null;
+  if (input.clientId && !client) return fail('Cliente não encontrado.');
+  const clientId = client?.id || null;
   const t0 = Date.now();
   try {
-    const img = await openaiImage({ prompt: `${prompt}\n\nEstilo: fotografia ou ilustração de estúdio premiado, sem texto na imagem, sem marcas d'água, sem logotipos reais.`, size: input.size || '1024x1024' });
+    const img = await openaiImage({ prompt: `${prompt}\n\nEstilo: fotografia ou ilustração de estúdio premiado, sem texto na imagem, sem marcas d'água, sem logotipos reais.`, size: input.size });
     // Mesma pasta dos uploads: Supabase Storage (bucket "files") ou a pasta de dados no modo local.
-    const stored = await putFile(uploadKey(input.clientId, `ia-${input.name || prompt.slice(0, 40)}.png`), img.bytes, img.mime);
+    const stored = await putFile(uploadKey(clientId, `ia-${input.name || prompt.slice(0, 40)}.png`), img.bytes, img.mime);
     const asset = await d.insert('assets', {
-      client_id: input.clientId || null,
+      client_id: clientId,
       kind: input.kind || 'imagem_ia',
       name: input.name || `Imagem IA · ${prompt.slice(0, 40)}`,
       path: stored.path,
@@ -168,23 +175,25 @@ export async function generateImageAction(input: { prompt: string; clientId?: st
       size_bytes: img.bytes.length,
       source: 'openai',
       tags: ['IA', 'ChatGPT'],
-      analysis: { prompt, model: img.model },
+      analysis: { prompt, model: img.model, size: img.size },
       created_by: user.id,
     } as any);
-    await d.insert('agent_runs', { agent: 'Imagem (ChatGPT)', model: img.model, input_tokens: Math.round(prompt.length / 4), output_tokens: 1000, cost_usd: estimateCost('openai:gpt-image-1', Math.round(prompt.length / 4), 1000), status: 'ok', client_id: input.clientId || null } as any);
+    await d.insert('agent_runs', { agent: 'Imagem (ChatGPT)', model: img.model, input_tokens: img.inTok, output_tokens: img.outTok, cost_usd: img.costUsd, status: 'ok', client_id: clientId } as any);
     await logActivity(d, { actor_id: user.id, actor_name: user.name, action: `gerou uma imagem com o ChatGPT (${Date.now() - t0} ms)`, entity: 'assets', entity_id: asset.id });
     revalidatePath('/biblioteca');
-    if (input.clientId) revalidatePath(`/clientes/${input.clientId}`);
+    if (clientId) revalidatePath(`/clientes/${clientId}`);
     revalidatePath('/marketing/brand');
     return { ok: true as const, id: asset.id, url: asset.url as string };
   } catch (e) {
-    await d.insert('agent_runs', { agent: 'Imagem (ChatGPT)', model: 'openai:gpt-image-1', input_tokens: 0, output_tokens: 0, cost_usd: 0, status: 'erro', client_id: input.clientId || null } as any);
-    return fail(`OpenAI: ${(e as Error).message}`);
+    await d.insert('agent_runs', { agent: 'Imagem (ChatGPT)', model: `openai:${openaiImageModel()}`, input_tokens: 0, output_tokens: 0, cost_usd: 0, status: 'erro', client_id: clientId } as any);
+    // Erro da OpenAI já vem em português e com o que fazer; o resto (disco, banco) ganha contexto.
+    return fail(e instanceof OpenAIError ? e.message : `Não foi possível salvar a imagem: ${(e as Error).message}`);
   }
 }
 
 export async function generateImageFormAction(fd: FormData) {
-  return generateImageAction({ prompt: String(fd.get('prompt') || ''), clientId: String(fd.get('client_id') || '') || null, size: (String(fd.get('size') || '1024x1024') as any), name: String(fd.get('name') || '') || undefined });
+  const size = String(fd.get('size') || '');
+  return generateImageAction({ prompt: String(fd.get('prompt') || ''), clientId: String(fd.get('client_id') || '') || null, size: isImageSize(size) ? size : '1024x1024', name: String(fd.get('name') || '') || undefined });
 }
 
 /** Moodboard de uma direção visual do BrandKit, gerado pelo ChatGPT a partir do conceito e da paleta. */

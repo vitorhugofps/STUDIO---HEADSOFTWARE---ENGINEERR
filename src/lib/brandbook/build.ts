@@ -1,22 +1,16 @@
 import 'server-only';
-import fs from 'node:fs';
-import path from 'node:path';
 import type { Asset, BrandKit, Client, DB } from '@/lib/db/types';
-import { STUDIO_DEFAULTS, dataDir, readConfig } from '@/lib/config';
+import { STUDIO_DEFAULTS, readConfig } from '@/lib/config';
+import { getFile } from '@/lib/storage';
 import { buildBrandbookData, brandbookFonts, chosenDirection, type BrandbookData } from './model';
 import { renderBrandbookHTML, type RenderOptions } from './render';
 import { embedGoogleFonts } from './fonts';
 
-const MIME: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml' };
 const MAX_IMAGE = 4 * 1024 * 1024;
 const MAX_TOTAL = 18 * 1024 * 1024;
 
-/** Lê um arquivo da pasta de dados (uploads e imagens geradas). */
-async function loadFileBuffer(rel: string): Promise<{ data: Buffer; mime: string } | null> {
-  const abs = path.join(dataDir(), rel);
-  if (!fs.existsSync(abs)) return null;
-  return { data: fs.readFileSync(abs), mime: MIME[path.extname(abs).toLowerCase()] || 'application/octet-stream' };
-}
+/** Lê um arquivo do armazenamento (Supabase Storage ou pasta de dados). */
+const loadFileBuffer = (rel: string) => getFile(rel);
 
 /** `/api/files/uploads/x.png` → `uploads/x.png` (só para arquivos servidos pelo app). */
 function relFromUrl(url: string | null | undefined): string | null {

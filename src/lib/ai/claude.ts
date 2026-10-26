@@ -3,13 +3,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getSecret, readConfig } from '@/lib/config';
 import { extractJSON } from '@/lib/utils';
 import type { DB } from '@/lib/db/types';
-import { fallbackEnabled, hasOpenAIKey, openaiChat } from './openai';
 
 /**
  * Roteador de IA do Studio.
- * 1. Claude primeiro, sempre: estratégia em Opus 5.5 ou Fable 5.1 (com esforço), copy em Sonnet 5.5, leve em Haiku 5.5.
- * 2. ChatGPT só como reserva (chamada ao Claude falhou ou sem chave da Anthropic) e para imagens.
- * 3. Sem nenhuma chave: devolve o exemplo marcado, nunca trava a tela.
+ * 1. Todo texto, estratégia e roteiro passam só pelo Claude: estratégia em Opus 5.5 ou Fable 5.1 (com esforço), copy em Sonnet 5.5, leve em Haiku 5.5.
+ * 2. O ChatGPT (OpenAI) não escreve texto nem serve de reserva: fica restrito às imagens (src/lib/ai/openai.ts).
+ * 3. Sem chave da Anthropic: devolve o exemplo marcado, nunca trava a tela.
  */
 
 export const MODELS = {
@@ -34,10 +33,6 @@ const PRICE: Record<string, { in: number; out: number }> = {
   'claude-opus-5-5': { in: 15, out: 75 },
   'claude-sonnet-5-5': { in: 3, out: 15 },
   'claude-haiku-5-5': { in: 0.8, out: 4 },
-  'openai:gpt-5': { in: 1.25, out: 10 },
-  'openai:gpt-5-mini': { in: 0.25, out: 2 },
-  'openai:gpt-4.1': { in: 2, out: 8 },
-  'openai:gpt-image-1': { in: 5, out: 40 },
 };
 
 export function resolveModel(tier: ModelTier) {
@@ -56,9 +51,9 @@ export function hasAIKey() {
   return Boolean(getSecret('anthropicApiKey'));
 }
 
-/** Há algum motor de texto disponível (Claude ou, como reserva, ChatGPT). */
+/** Há motor de texto disponível? Só o Claude escreve texto, então é o mesmo que ter a chave da Anthropic. */
 export function hasAnyTextAI() {
-  return hasAIKey() || (fallbackEnabled() && hasOpenAIKey());
+  return hasAIKey();
 }
 
 type GenOpts = {
@@ -110,29 +105,16 @@ async function record(opts: GenOpts, model: string, inTok: number, outTok: numbe
   }
 }
 
-/** Executa com Claude; se falhar (ou não houver chave), tenta o ChatGPT quando a reserva está ligada. */
-async function runText(opts: GenOpts, json: boolean): Promise<{ text: string; model: string; inTok: number; outTok: number } | null> {
-  let lastError: Error | null = null;
-  if (hasAIKey()) {
-    try {
-      return await callClaude(opts);
-    } catch (e) {
-      lastError = e as Error;
-      console.error('[claude]', lastError.message);
-      await record(opts, resolveModel(opts.tier || 'copy'), 0, 0, 'erro');
-    }
+/** Executa com o Claude. Sem chave da Anthropic devolve null (quem chamou usa o exemplo marcado); se a chamada falhar, propaga o erro. */
+async function runText(opts: GenOpts): Promise<{ text: string; model: string; inTok: number; outTok: number } | null> {
+  if (!hasAIKey()) return null;
+  try {
+    return await callClaude(opts);
+  } catch (e) {
+    console.error('[claude]', (e as Error).message);
+    await record(opts, resolveModel(opts.tier || 'copy'), 0, 0, 'erro');
+    throw e;
   }
-  if (fallbackEnabled() && hasOpenAIKey()) {
-    try {
-      const r = await openaiChat({ system: opts.system, user: opts.user, json, maxTokens: opts.maxTokens });
-      return r;
-    } catch (e) {
-      console.error('[openai]', (e as Error).message);
-      await record({ ...opts, agent: `${opts.agent} (reserva ChatGPT)` }, 'openai:' + (readConfig().openaiTextModel || 'gpt-5'), 0, 0, 'erro');
-    }
-  }
-  if (lastError) throw lastError;
-  return null;
 }
 
 /** Gera JSON. Sem motor disponível, devolve o exemplo marcado (isExample=true). */
@@ -142,7 +124,7 @@ export async function generateJSON<T>(opts: GenOpts & { example: T }): Promise<G
     return { data: opts.example, isExample: true, model: 'exemplo' };
   }
   try {
-    const r = await runText({ ...opts, system: opts.system + '\n\nResponda SOMENTE com JSON válido, sem comentários, no formato pedido.' }, true);
+    const r = await runText({ ...opts, system: opts.system + '\n\nResponda SOMENTE com JSON válido, sem comentários, no formato pedido.' });
     if (!r) return { data: opts.example, isExample: true, model: 'exemplo' };
     const parsed = extractJSON<T>(r.text);
     await record(opts, r.model, r.inTok, r.outTok, parsed ? 'ok' : 'erro');
@@ -161,7 +143,7 @@ export async function generateText(opts: GenOpts & { fallback: string }): Promis
     return { data: opts.fallback, isExample: true, model: 'exemplo' };
   }
   try {
-    const r = await runText(opts, false);
+    const r = await runText(opts);
     if (!r) return { data: opts.fallback, isExample: true, model: 'exemplo' };
     await record(opts, r.model, r.inTok, r.outTok, 'ok');
     return { data: r.text.trim(), isExample: false, model: r.model };

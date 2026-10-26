@@ -18,8 +18,13 @@ import { FILES_BUCKET } from '@/lib/file-keys';
 const MIME: Record<string, string> = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml',
   '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav',
-  '.pdf': 'application/pdf', '.txt': 'text/plain', '.json': 'application/json',
+  '.pdf': 'application/pdf', '.txt': 'text/plain', '.json': 'application/json', '.html': 'text/html; charset=utf-8',
 };
+
+/** HTML guardado (brandbooks, portais) abre em origem isolada: o script da página não alcança a sessão do app. */
+function extraHeaders(mime: string): Record<string, string> {
+  return /text\/html/.test(mime) ? { 'content-security-policy': 'sandbox allow-scripts allow-popups allow-downloads' } : {};
+}
 
 export function mimeFromName(name: string) {
   return MIME[path.extname(name).toLowerCase()] || 'application/octet-stream';
@@ -144,7 +149,8 @@ export async function fileResponse(rel: string): Promise<Response> {
     const dl = await bucket.download(key);
     if (dl.error || !dl.data) return text('Não encontrado', 404);
     const buf = Buffer.from(await dl.data.arrayBuffer());
-    return new Response(buf, { headers: { 'content-type': dl.data.type || mimeFromName(key), 'content-length': String(buf.length), 'cache-control': 'private, max-age=3600' } });
+    const mime = dl.data.type || mimeFromName(key);
+    return new Response(buf, { headers: { 'content-type': mime, 'content-length': String(buf.length), 'cache-control': 'private, max-age=3600', ...extraHeaders(mime) } });
   }
 
   let abs: string;
@@ -158,7 +164,8 @@ export async function fileResponse(rel: string): Promise<Response> {
     return text('Não encontrado', 404);
   }
   const body = Readable.toWeb(fs.createReadStream(abs)) as unknown as ReadableStream;
-  return new Response(body, { headers: { 'content-type': mimeFromName(key), 'content-length': String(size), 'cache-control': 'private, max-age=3600' } });
+  const mime = mimeFromName(key);
+  return new Response(body, { headers: { 'content-type': mime, 'content-length': String(size), 'cache-control': 'private, max-age=3600', ...extraHeaders(mime) } });
 }
 
 /** Remove o arquivo. Best-effort: nunca lança, devolve se removeu. */

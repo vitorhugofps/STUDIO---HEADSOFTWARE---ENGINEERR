@@ -19,7 +19,12 @@ export function IntegrationTest({ provider, disabled }: { provider: Provider; di
         onClick={() =>
           start(async () => {
             setResult(null);
-            setResult(await testIntegrationAction(provider));
+            try {
+              setResult(await testIntegrationAction(provider));
+            } catch (e) {
+              // Falha da própria chamada (servidor reiniciando, rede): mostra como erro em vez de derrubar a página.
+              setResult({ ok: false, detail: `Não foi possível testar agora: ${(e as Error).message || 'sem resposta do servidor'}` });
+            }
           })
         }
       >
