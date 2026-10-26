@@ -5,15 +5,14 @@
  * e coleta pelo Apify. Nenhum segredo volta para o navegador: só o resultado do teste.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { revalidatePath } from 'next/cache';
-import { db, logActivity } from '@/lib/db';
+import { db, logActivity, saveConfig } from '@/lib/db';
 import { getSession } from '@/lib/auth';
-import { dataDir, getSecret, readConfig, writeConfig } from '@/lib/config';
+import { getSecret, readConfig } from '@/lib/config';
 import { anthropicTest, estimateCost } from '@/lib/ai/claude';
 import { hasOpenAIKey, openaiImage, openaiTest } from '@/lib/ai/openai';
-import { slugify, uid } from '@/lib/utils';
+import { uploadKey } from '@/lib/file-keys';
+import { putFile } from '@/lib/storage';
 
 type Fail = { ok: false; error: string };
 const fail = (error: string): Fail => ({ ok: false, error });
@@ -132,7 +131,9 @@ export async function saveOpenAIAction(fd: FormData) {
   if (fd.has('openaiTextModel')) patch.openaiTextModel = text;
   if (fd.has('openaiImageModel')) patch.openaiImageModel = image;
   patch.aiFallbackToOpenAI = ['on', 'true', '1'].includes(String(fd.get('aiFallbackToOpenAI') || ''));
-  writeConfig(patch as any);
+  // Supabase: linha compartilhada do time (só admin grava). Local: config.json. Se não gravar, volta o motivo.
+  const saved = await saveConfig(patch as any);
+  if (!saved.ok) return fail(saved.error);
   const d = await db();
   const rows = await d.list('integrations', { where: { provider: 'openai', scope: 'studio' } });
   const connected = Boolean(getSecret('openaiApiKey'));
@@ -151,21 +152,18 @@ export async function generateImageAction(input: { prompt: string; clientId?: st
   const prompt = (input.prompt || '').trim();
   if (prompt.length < 8) return fail('Descreva a imagem com mais detalhes.');
   if (!hasOpenAIKey()) return fail('Geração de imagem usa o ChatGPT: cole a chave da OpenAI em Settings → Integrações.');
-  if (process.env.VERCEL) return fail('Geração de imagem indisponível neste ambiente.');
   const d = await db();
   const t0 = Date.now();
   try {
     const img = await openaiImage({ prompt: `${prompt}\n\nEstilo: fotografia ou ilustração de estúdio premiado, sem texto na imagem, sem marcas d'água, sem logotipos reais.`, size: input.size || '1024x1024' });
-    const rel = path.join('uploads', input.clientId || 'studio', `${Date.now().toString(36)}-ia-${slugify(input.name || prompt.slice(0, 40)) || uid().slice(0, 6)}.png`);
-    const abs = path.join(dataDir(), rel);
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, img.bytes);
+    // Mesma pasta dos uploads: Supabase Storage (bucket "files") ou a pasta de dados no modo local.
+    const stored = await putFile(uploadKey(input.clientId, `ia-${input.name || prompt.slice(0, 40)}.png`), img.bytes, img.mime);
     const asset = await d.insert('assets', {
       client_id: input.clientId || null,
       kind: input.kind || 'imagem_ia',
       name: input.name || `Imagem IA · ${prompt.slice(0, 40)}`,
-      path: rel,
-      url: `/api/files/${rel.split(path.sep).join('/')}`,
+      path: stored.path,
+      url: stored.url,
       mime: img.mime,
       size_bytes: img.bytes.length,
       source: 'openai',

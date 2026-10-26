@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { SignJWT, jwtVerify } from 'jose';
-import { isSupabaseMode, sessionSecret } from '@/lib/config';
+import { isSupabaseMode, sessionSecret, syncConfigFromDb } from '@/lib/config';
 import { verifyPassword, hashPassword } from '@/lib/password';
 import { localDB } from '@/lib/db/local';
 import { ensureSeed } from '@/lib/db/seed';
@@ -37,7 +37,9 @@ export async function getSession(): Promise<SessionUser | null> {
       const { data } = await sb.auth.getUser();
       const user = data.user;
       if (!user) return null;
-      const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      // Com a sessão confirmada, já carrega a configuração compartilhada do time (cache de 30 s):
+      // páginas como Settings leem as chaves logo depois de requireUser(), antes de qualquer db().
+      const [{ data: profile }] = await Promise.all([sb.from('profiles').select('*').eq('id', user.id).maybeSingle(), syncConfigFromDb(sb)]);
       if (profile) return profileToUser(profile as Profile, 'supabase');
       const meta = (user.user_metadata || {}) as Record<string, string>;
       return {

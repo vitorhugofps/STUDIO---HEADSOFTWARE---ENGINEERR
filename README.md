@@ -19,7 +19,17 @@ Para desenvolver com recarga automática: **`Abrir em desenvolvimento.command`**
 | **Supabase** | `.env.local` com `SUPABASE_URL` e `SUPABASE_ANON_KEY` | Projeto `impacto-headsoftware` (São Paulo). Esquema em `supabase/migrations/0001_init.sql`. Usuários no Supabase Auth (`username@headsoftware.studioimpacto.com.br`). |
 | **Local** | sem as variáveis | `.data/db.json` (dev) ou `~/Library/Application Support/IMPACTO HEADSOFTWARE/data` (app). Dados de exemplo e os 4 usuários. |
 
-Uploads ficam em `data/uploads`. Vídeos grandes: use link do Google Drive.
+Uploads ficam em `data/uploads` no modo local e no bucket `files` do Supabase Storage no modo Supabase. Vídeos muito grandes: use link do Google Drive.
+
+## Vercel
+
+Na Vercel o app roda em modo Supabase. As funções têm disco somente leitura (só `/tmp`, volátil) e recusam corpo de requisição acima de 4,5 MB. Por isso:
+
+- **Variáveis de ambiente** (Project Settings → Environment Variables): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`. As duas `NEXT_PUBLIC_*` precisam existir já no build, porque o navegador as usa para enviar arquivos direto ao Supabase. Opcionais: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `META_ACCESS_TOKEN`, `RESEND_API_KEY`, `APIFY_TOKEN` (valem quando a chave não foi salva em Settings).
+- **Arquivos**: o navegador envia direto ao bucket privado `files` do Supabase Storage em `uploads/<cliente|studio>/<arquivo>` e só avisa `/api/upload` para registrar o asset (sem o limite de 4,5 MB). `/api/files/…` responde 302 para uma URL assinada de 1 hora, então vídeos tocam direto do Supabase. As imagens geradas por IA vão para o mesmo bucket. O limite por arquivo é o do projeto Supabase (Dashboard → Storage → Settings): no projeto atual é de 50 MB, apesar de o bucket aceitar mais; acima disso o envio é recusado com um aviso na fila e o caminho é o link do Google Drive (ou subir o limite global do projeto).
+- **Configuração compartilhada**: as chaves e os dados do Studio salvos em **Settings** ficam na tabela `app_config` (linha `main`), valem para o time inteiro e sobrevivem a novos deploys. Todo usuário logado lê; **só o admin grava** (os outros papéis recebem o aviso na tela). As instâncias atualizam o cache a cada 30 s.
+- **Banco**: o bucket `files`, as políticas e a tabela `app_config` estão em `supabase/migrations/0002_arquivos_e_config.sql` (o projeto do time já a tem; aplique em qualquer outro projeto Supabase antes de publicar).
+- No app desktop sem as variáveis `NEXT_PUBLIC_*` no build, o envio continua passando pelo servidor local (`/api/upload`).
 
 ## IA
 
@@ -36,7 +46,7 @@ src/lib/questionnaire   questionário de diagnóstico (10 blocos + nichos)
 src/lib/actions         server actions por módulo
 src/components          design system (primitives, client, charts, kanban, dropzone) e layout (sidebar, topbar, assistente)
 desktop/                app Electron (vidro nativo do macOS, servidor Next embutido)
-supabase/               migração do esquema
+supabase/               migrações do esquema (tabelas, arquivos e configuração compartilhada)
 ```
 
 ## Comandos
